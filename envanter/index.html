@@ -175,13 +175,14 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .detail-val{font-weight:700;color:var(--text);}
 
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px;}::-webkit-scrollbar-thumb:hover{background:var(--blue);}
+@keyframes spin{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="logo" href="Ruzly/shop">
+    <a class="logo" href="/shop">
       <div class="logo-mark"><div class="logo-ball"></div></div>
       <div>
         <div class="logo-text">Rüzly</div>
@@ -189,7 +190,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
       </div>
     </a>
     <div class="topbar-actions">
-      <a href="Ruzly/shop" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
+      <a href="/shop" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
       <button class="inv-btn" id="notifBtn" style="display:none">
         🔔 <span class="inv-badge" id="notifCount">0</span>
       </button>
@@ -297,8 +298,11 @@ function renderGrid(){
       <div class="poke-footer">
         <div class="poke-price">${money(it.price||0)}</div>
         <div class="poke-qty">${it.qty||1}×</div>
+      </div>
+      <div style="padding:0 10px 10px;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm viewCardBtn" style="flex:1;font-size:11px">👁 Görüntüle</button>
       </div>`;
-    div.onclick=()=>showCardDetail(it);
+    div.querySelector('.viewCardBtn').onclick=e=>{e.stopPropagation();showCardDetail(it);};
     grid.appendChild(div);
   });
 }
@@ -311,32 +315,50 @@ function showCardDetail(it){
       <button class="modal-close" id="mc">✕</button>
     </div>
     <div class="modal-body">
-      ${it.imageUrl?`<img src="${esc(it.imageUrl)}" class="detail-img" alt="${esc(it.title)}"/>`
-        :`<div class="detail-emoji" style="background:${cardBg(it.cat)}">${cardEmoji(it.cat)}</div>`}
-      <div style="font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:10px;line-height:1.6">${esc(it.desc||'Açıklama yok.')}</div>
+      ${it.imageUrl
+        ?`<img src="${esc(it.imageUrl)}" style="width:100%;max-height:320px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:14px" alt="${esc(it.title)}"/>`
+        :`<div style="width:100%;height:160px;background:${cardBg(it.cat)};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:14px">${cardEmoji(it.cat)}</div>`}
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;padding:10px;background:var(--bg);border-radius:8px">${esc(it.desc||'Açıklama yok.')}</div>
       <div class="detail-row"><span class="detail-key">Nadirlik</span><span class="detail-val">${rarityLabel(rarity)} (${rarity})</span></div>
       <div class="detail-row"><span class="detail-key">Kategori</span><span class="detail-val">${esc(it.cat||'—')}</span></div>
-      <div class="detail-row"><span class="detail-key">Fiyat</span><span class="detail-val">${money(it.price||0)}</span></div>
+      <div class="detail-row"><span class="detail-key">Fiyat</span><span class="detail-val" style="color:var(--blue)">${money(it.price||0)}</span></div>
       <div class="detail-row"><span class="detail-key">Adet</span><span class="detail-val">${it.qty||1}</span></div>
       <div class="detail-row"><span class="detail-key">Satıcı</span><span class="detail-val">${esc(it.sellerName||'—')}</span></div>
-      <div class="detail-row"><span class="detail-key">Ödeme</span><span class="detail-val">${it.payMethod==='cash'?'💵 Nakit':'💳 Kredi Kartı'}</span></div>
       <div class="detail-row"><span class="detail-key">Durum</span><span class="detail-val" style="color:${it.status==='owned'?'#2e7d32':'#e65100'}">${it.status==='owned'?'✓ Sahipsin':'⏳ Ödeme Bekleniyor'}</span></div>
+      ${it.status==='pending'?`<div id="deliveryInfo" style="margin-top:12px"></div>`:''}
     </div>`);
   qs('#mc').onclick=closeModal;
+  // Show delivery day from notification if pending
+  if(it.status==='pending'){
+    db.collection('sellerNotifications')
+      .where('buyerId','==',currentUser.uid)
+      .where('itemId','==',it.itemId)
+      .get().then(snap=>{
+        const el=qs('#deliveryInfo');if(!el)return;
+        if(!snap.empty){
+          const n=snap.docs[0].data();
+          if(n.deliveryDay){
+            el.innerHTML=`<div style="background:#e8f5e9;border:2px solid #a5d6a7;border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:13px;color:#2e7d32">📅 Satıcı teslimat günü belirledi: <strong>${esc(n.deliveryDay)} gün içinde</strong><br><span style="font-size:11px;color:var(--muted)">Okulda nakit ödeme yaptıktan sonra satıcı onaylayacak.</span></div>`;
+          }else{
+            el.innerHTML=`<div style="background:#fff8e1;border:2px solid #ffb300;border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:12px;color:#e65100">⏳ Satıcı henüz teslimat günü belirlemedi.<br><span style="font-size:11px;color:var(--muted)">Satıcı bildirimden "Al" butonuna basıp gün belirlediğinde burada görünecek.</span></div>`;
+          }
+        }
+      }).catch(()=>{});
+  }
 }
 
 /* ─── LOAD INVENTORY ─── */
 async function loadInventory(){
   if(!currentUser){qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">🔐</div>Giriş yaparak envanterinizi görün.</div>`;return;}
+  qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon" style="animation:spin 1s linear infinite;display:inline-block">⏳</div><div style="margin-top:8px">Yükleniyor...</div></div>`;
   try{
-    // Also fetch item descriptions/images from items collection
-    const snap=await db.collection('inventory').where('userId','==',currentUser.uid).orderBy('addedAt','desc').get();
-    const base=snap.docs.map(d=>({id:d.id,...d.data()}));
-    // Enrich with item data (desc, imageUrl)
+    const snap=await db.collection('inventory').where('userId','==',currentUser.uid).get();
+    const base=snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.addedAt?.seconds||0)-(a.addedAt?.seconds||0));
     const enriched=await Promise.all(base.map(async inv=>{
       try{
         const itemDoc=await db.collection('items').doc(inv.itemId).get();
-        if(itemDoc.exists){const d=itemDoc.data();return{...inv,desc:d.desc||'',imageUrl:d.imageUrl||'',cat:d.cat||inv.cat};}
+        if(itemDoc.exists){const d=itemDoc.data();return{...inv,desc:d.desc||inv.desc||'',imageUrl:d.imageUrl||inv.imageUrl||'',cat:d.cat||inv.cat};}
       }catch(e){}
       return inv;
     }));
@@ -344,11 +366,11 @@ async function loadInventory(){
     const pending=enriched.filter(i=>i.status==='pending');
     if(pending.length>0){
       qs('#pendingAlert').style.display='block';
-      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen Ödeme</h3><p>Bu kartlar nakit ödeme bekleniyor. Yarın okulda satıcıya parayı teslim ettiğinde satıcı onaylayacak ve kartlar "Sahip" durumuna geçecek.</p></div>`;
+      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen Ödeme</h3><p>Bu kartlar nakit ödeme bekleniyor. Satıcı teslimat günü belirleyecek.</p></div>`;
     }else{qs('#pendingAlert').style.display='none';}
     qs('#pageSubtitle').textContent=`// ${enriched.length} kart — ${pending.length} bekleyen`;
     renderGrid();
-  }catch(e){console.error(e);}
+  }catch(e){console.error(e);qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">❌</div>Yükleme hatası: ${e.message}</div>`;}
 }
 
 /* ─── NOTIFICATIONS ─── */
@@ -357,43 +379,70 @@ function listenNotifications(){
   if(!currentUser)return;
   notifUnsub=db.collection('sellerNotifications')
     .where('sellerId','==',currentUser.uid)
-    .where('read','==',false)
-    .orderBy('createdAt','desc')
-    .limit(30)
     .onSnapshot(snap=>{
-      cachedNotifs=snap.docs.map(d=>({id:d.id,...d.data()}));
+      cachedNotifs=snap.docs.map(d=>({id:d.id,...d.data()}))
+        .filter(n=>n.read===false)
+        .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
       const count=cachedNotifs.length;
-      const btn=qs('#notifBtn'),badge=qs('#notifCount');
-      if(count>0){btn.style.display='flex';badge.textContent=count;}
-      else{btn.style.display='none';}
-    },e=>console.error(e));
+      const badge=qs('#notifCount');
+      if(count>0){qs('#notifBtn').style.display='flex';badge.style.display='inline-block';badge.textContent=count;}
+      else{badge.style.display='none';}
+    },e=>console.error('notif err:',e.code,e.message));
 }
 qs('#notifBtn').onclick=showNotifModal;
 function showNotifModal(){
-  if(!currentUser)return;
+  if(!currentUser){
+    openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Giriş yapın.</div></div>`);
+    qs('#mc').onclick=closeModal;return;
+  }
   if(cachedNotifs.length===0){
-    openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Yeni bildirim yok.</div></div>`);
+    openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:30px">Yeni bildirim yok.</div></div>`);
     qs('#mc').onclick=closeModal;return;
   }
   const rows=cachedNotifs.map(n=>`
-    <div style="border:2px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:14px;font-weight:700">${esc(n.buyerName||'Alıcı')}</div>
-      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1} — ${n.payMethod==='cash'?'💵 Nakit':'💳 Kredi Kartı'}</div>
-      ${n.payMethod==='cash'?`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:6px 10px;font-family:var(--mono);font-size:11px;color:#e65100;margin:6px 0">⏳ Okulda nakit teslim bekleniyor</div>
-      <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" data-qty="${n.qty||1}" data-title="${esc(n.itemTitle)}" style="margin-top:4px">✓ Nakit Teslim Alındı — Onayla</button>`:''}
-      <button class="btn btn-ghost btn-sm markRead" data-id="${n.id}" style="margin-top:4px;margin-left:6px">Kapat</button>
+    <div style="border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:15px;font-weight:700">${esc(n.buyerName||'Alıcı')}</div>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1} — 💵 Nakit</div>
+      ${n.deliveryDay
+        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)}</strong> gün içinde</div>
+          <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Nakit Teslim Alındı — Onayla</button>`
+        :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Nakit ödeme bekleniyor — teslimat günü belirle</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+            <select class="deliverySelect" data-id="${n.id}" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;background:#f5f5f0;outline:none">
+              <option value="">Teslimat Günü Seç</option>
+              <option value="1">Yarın (1 gün)</option>
+              <option value="2">2 gün içinde</option>
+              <option value="3">3 gün içinde</option>
+              <option value="5">5 gün içinde</option>
+              <option value="7">1 hafta içinde</option>
+            </select>
+            <button class="btn btn-primary btn-sm setDelivery" data-id="${n.id}">Al ✓</button>
+          </div>`
+      }
+      <button class="btn btn-ghost btn-sm markRead" data-id="${n.id}" style="margin-top:8px">Kapat</button>
     </div>`).join('');
   openModal(`<div class="modal-head"><h2>🔔 Satıcı Bildirimleri</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body">${rows}</div>`);
   qs('#mc').onclick=closeModal;
   qsa('.markRead').forEach(b=>b.onclick=async()=>{
     await db.collection('sellerNotifications').doc(b.dataset.id).update({read:true});showNotifModal();
   });
+  qsa('.setDelivery').forEach(b=>b.onclick=async()=>{
+    const sel=qs(`.deliverySelect[data-id="${b.dataset.id}"]`);
+    const day=sel?.value;
+    if(!day){alert('Teslimat günü seç!');return;}
+    await db.collection('sellerNotifications').doc(b.dataset.id).update({deliveryDay:day});
+    showNotifModal();
+  });
   qsa('.confirmCash').forEach(b=>b.onclick=async()=>{
-    const snap=await db.collection('inventory').where('userId','==',b.dataset.uid).where('itemId','==',b.dataset.item).where('status','==','pending').get();
+    const snap=await db.collection('inventory')
+      .where('userId','==',b.dataset.uid)
+      .where('itemId','==',b.dataset.item)
+      .where('status','==','pending').get();
     const batch=db.batch();
     snap.docs.forEach(d=>batch.update(d.ref,{status:'owned'}));
     batch.update(db.collection('sellerNotifications').doc(b.dataset.id),{read:true});
     await batch.commit();
+    await loadInventory();
     showNotifModal();
   });
 }
@@ -409,7 +458,7 @@ async function renderUserArea(){
   }else{
     qs('#userArea').innerHTML='';
     qs('#signinBtn').textContent='Giriş Yap';
-    qs('#signinBtn').onclick=()=>{location.href='Ruzly/shop';};
+    qs('#signinBtn').onclick=()=>{location.href='/shop';};
   }
 }
 
