@@ -191,8 +191,8 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
     </a>
     <div class="topbar-actions">
       <a href="/shop" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
-      <button class="inv-btn" id="notifBtn" style="display:none">
-        🔔 <span class="inv-badge" id="notifCount">0</span>
+      <button class="inv-btn" id="notifBtn" onclick="showNotifModal()">
+        🔔 <span class="inv-badge" id="notifCount" style="display:none">0</span>
       </button>
       <div id="userArea"></div>
       <button id="signinBtn" class="btn-ghost btn">Giriş Yap</button>
@@ -370,7 +370,7 @@ async function loadInventory(){
     }else{qs('#pendingAlert').style.display='none';}
     qs('#pageSubtitle').textContent=`// ${enriched.length} kart — ${pending.length} bekleyen`;
     renderGrid();
-  }catch(e){console.error(e);qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">❌</div>Yükleme hatası: ${e.message}</div>`;}
+  }catch(e){console.error('ENVANTER HATA:',e.code, e.message);qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">❌</div><div style="font-family:var(--mono);font-size:12px">Hata: ${esc(e.message)}</div></div>`;}
 }
 
 /* ─── NOTIFICATIONS ─── */
@@ -385,7 +385,7 @@ function listenNotifications(){
         .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
       const count=cachedNotifs.length;
       const badge=qs('#notifCount');
-      if(count>0){qs('#notifBtn').style.display='flex';badge.style.display='inline-block';badge.textContent=count;}
+      if(count>0){badge.style.display='inline-block';badge.textContent=count;}
       else{badge.style.display='none';}
     },e=>console.error('notif err:',e.code,e.message));
 }
