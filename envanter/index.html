@@ -182,7 +182,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 
 <header class="topbar">
   <div class="topbar-inner">
-    <a class="logo" href="/shop">
+    <a class="logo" href="../">
       <div class="logo-mark"><div class="logo-ball"></div></div>
       <div>
         <div class="logo-text">Rüzly</div>
@@ -190,7 +190,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
       </div>
     </a>
     <div class="topbar-actions">
-      <a href="/shop" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
+      <a href="../shop/" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
       <button class="inv-btn" id="notifBtn" onclick="showNotifModal()">
         🔔 <span class="inv-badge" id="notifCount" style="display:none">0</span>
       </button>
@@ -458,7 +458,7 @@ async function renderUserArea(){
   }else{
     qs('#userArea').innerHTML='';
     qs('#signinBtn').textContent='Giriş Yap';
-    qs('#signinBtn').onclick=()=>{location.href='/shop';};
+    qs('#signinBtn').onclick=()=>{location.href='../shop/';};
   }
 }
 
