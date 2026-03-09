@@ -190,7 +190,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
       </div>
     </a>
     <div class="topbar-actions">
-      <a href="../shop/" class="inv-btn" style="text-decoration:none;color:inherit">🛒 Al Kartı</a>
+      
       <button class="inv-btn" id="notifBtn" onclick="showNotifModal()">
         🔔 <span class="inv-badge" id="notifCount" style="display:none">0</span>
       </button>
@@ -340,19 +340,14 @@ function showCardDetail(it){
 
 async function sendPickupRequest(it){
   if(!currentUser)return;
-  if(!window.confirm(`"${it.title}" kartını almak istediğini satıcıya bildir?`))return;
+  if(!window.confirm('"'+it.title+'" kartını aldın mı? Envanterden silinecek.'))return;
   try{
-    await db.collection('sellerNotifications').add({
-      sellerId:it.sellerId,buyerId:currentUser.uid,
-      buyerName:currentUser.displayName||currentUser.email,
-      itemTitle:it.title,itemId:it.itemId,qty:it.qty||1,
-      payMethod:'cash',status:'pickup_request',type:'pickup',
-      read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
+    await db.collection('inventory').doc(it.id).delete();
     const t=document.createElement('div');
     t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;';
-    t.innerHTML=`<div style="font-weight:700;color:#2e7d32">✓ Satıcıya Bildirildi!</div><div style="font-size:12px;margin-top:4px">${esc(it.title)} — Okulda buluşun 🤝</div>`;
+    t.innerHTML='<div style="font-weight:700;color:#2e7d32">✓ Kart Alındı!</div><div style="font-size:12px;margin-top:4px">'+esc(it.title)+' envanterden silindi.</div>';
     document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
+    await loadInventory();
   }catch(e){alert('Hata: '+e.message);}
 }
 
