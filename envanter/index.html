@@ -190,10 +190,11 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
       </div>
     </a>
     <div class="topbar-actions">
-      <a href="../shop/" class="inv-btn" style="text-decoration:none;color:inherit">🏪 Mağaza</a>
+      <a href="../shop/" class="inv-btn" style="text-decoration:none;color:inherit">🛒 Al Kartı</a>
       <button class="inv-btn" id="notifBtn" onclick="showNotifModal()">
         🔔 <span class="inv-badge" id="notifCount" style="display:none">0</span>
       </button>
+      <button class="inv-btn" id="adminBtn" style="display:none;background:#e8f5e9;border-color:#a5d6a7;color:#2e7d32">👑 Admin</button>
       <div id="userArea"></div>
       <button id="signinBtn" class="btn-ghost btn">Giriş Yap</button>
     </div>
@@ -447,12 +448,18 @@ function showNotifModal(){
   });
 }
 
+const ADMIN_EMAIL='urtugaz@gmail.com';
+
 /* ─── USER AREA ─── */
 async function renderUserArea(){
   if(currentUser){
-    qs('#userArea').innerHTML=`<button class="btn-ghost btn btn-sm"">👤 ${esc(currentUser.displayName||currentUser.email.split('@')[0])}</button>`;
+    qs('#userArea').innerHTML=`<button class="btn-ghost btn btn-sm">👤 ${esc(currentUser.displayName||currentUser.email.split('@')[0])}</button>`;
     qs('#signinBtn').textContent='Çıkış';
     qs('#signinBtn').onclick=()=>auth.signOut();
+    if(currentUser.email===ADMIN_EMAIL){
+      qs('#adminBtn').style.display='flex';
+      qs('#adminBtn').onclick=showAdminPanel;
+    }
     await loadInventory();
     listenNotifications();
   }else{
@@ -460,6 +467,44 @@ async function renderUserArea(){
     qs('#signinBtn').textContent='Giriş Yap';
     qs('#signinBtn').onclick=()=>{location.href='../shop/';};
   }
+}
+
+/* ─── ADMIN PANEL ─── */
+async function showAdminPanel(){
+  openModal(`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — Tüm Envanterler</h2><button class="modal-close" id="mc">✕</button></div>
+  <div class="modal-body"><div style="font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:20px">Yükleniyor...</div></div>`);
+  qs('#mc').onclick=closeModal;
+  try{
+    const snap=await db.collection('inventory').get();
+    const all=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Group by user
+    const byUser={};
+    all.forEach(it=>{
+      const u=it.userName||it.userId||'?';
+      if(!byUser[u])byUser[u]=[];
+      byUser[u].push(it);
+    });
+    const rColors={C:'#757575',U:'#1565c0',R:'#6a1b9a',SR:'#e65100'};
+    let html='';
+    Object.entries(byUser).forEach(([user,items])=>{
+      const owned=items.filter(i=>i.status==='owned').length;
+      const pending=items.filter(i=>i.status==='pending').length;
+      html+=`<div style="border:2px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden">
+        <div style="background:var(--blue-light);padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700;font-size:14px">👤 ${esc(user)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">${owned} sahip · ${pending} bekleyen</div>
+        </div>
+        <div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">
+          ${items.map(it=>`<div style="background:${it.status==='pending'?'#fff8e1':'#f5f5f0'};border:1.5px solid ${it.status==='pending'?'#ffb300':'#ddd'};border-radius:7px;padding:5px 10px;font-size:12px;font-family:var(--mono)">
+            ${it.rarity?`<span style="color:${rColors[it.rarity]||'#666'};font-weight:700">${it.rarity}</span> `:''}${esc(it.title||'?')} ×${it.qty||1} ${it.status==='pending'?'⏳':'✓'}
+          </div>`).join('')}
+        </div>
+      </div>`;
+    });
+    qs('#modalContent').innerHTML=`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — ${Object.keys(byUser).length} Kullanıcı</h2><button class="modal-close" id="mc">✕</button></div>
+    <div class="modal-body">${html||'<div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Henüz envanter yok.</div>'}</div>`;
+    qs('#mc').onclick=closeModal;
+  }catch(e){alert('Admin panel hatası: '+e.message);}
 }
 
 auth.onAuthStateChanged(async user=>{
