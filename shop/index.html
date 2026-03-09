@@ -511,11 +511,12 @@ function openBuyModal(itemId){
     if(!doc.exists)return;
     const it=doc.data();it.id=doc.id;
     if((it.stock||0)<=0){alert('Bu ürün stokta yok.');return;}
+    const isPack=it.cat==='Pack'&&(it.cardPool||[]).length>0;
     openModal(`
-      <div class="modal-head"><h2>🛒 Satın Al</h2><button class="modal-close" id="mc">✕</button></div>
+      <div class="modal-head"><h2>${isPack?'📦 Pack Satın Al':'🛒 Satın Al'}</h2><button class="modal-close" id="mc">✕</button></div>
       <div class="modal-body">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
-          <div style="width:64px;height:64px;border-radius:10px;overflow:hidden;flex-shrink:0;background:${cardBg(it.cat)};display:flex;align-items:center;justify-content:center;font-size:30px">
+          <div style="width:64px;height:64px;border-radius:10px;overflow:hidden;flex-shrink:0;background:linear-gradient(135deg,#fff3e0,#ffe0b2);display:flex;align-items:center;justify-content:center;font-size:30px">
             ${it.imageUrl?`<img src="${esc(it.imageUrl)}" style="width:100%;height:100%;object-fit:cover"/>`:`${cardEmoji(it.cat)}`}
           </div>
           <div>
@@ -524,10 +525,14 @@ function openBuyModal(itemId){
             <div style="font-size:12px;font-family:var(--mono);color:var(--muted)">Stok: ${it.stock} | ${esc(it.ownerName||'')}</div>
           </div>
         </div>
+        ${isPack?`<div style="background:#e8f5e9;border:2px solid #a5d6a7;border-radius:10px;padding:12px;margin-bottom:12px;font-family:var(--mono);font-size:12px">
+          📦 Bu pack açıldığında <strong>${it.packSize||5} kart</strong> random olarak gelecek!<br>
+          <span style="color:var(--muted)">SR %3 · R %12 · U %25 · C %60</span>
+        </div>`:''}
         <div class="form-field"><label class="form-label">Miktar</label><input id="buyQty" type="number" class="form-input" value="1" min="1" max="${it.stock}"/></div>
         <div style="background:#fff8e1;border:2px solid #ffb300;border-radius:10px;padding:14px;margin-bottom:12px;display:flex;gap:12px;align-items:center">
           <div style="font-size:28px">💵</div>
-          <div><div style="font-size:14px;font-weight:700;text-transform:uppercase">Nakit Ödeme</div><div style="font-family:var(--mono);font-size:12px;color:#795548;margin-top:3px">Sipariş oluşur → Yarın okulda satıcıya nakit öde → Satıcı onaylar → Kart envanterine eklenir</div></div>
+          <div><div style="font-size:14px;font-weight:700;text-transform:uppercase">Nakit Ödeme</div><div style="font-family:var(--mono);font-size:12px;color:#795548;margin-top:3px">Sipariş oluşur → Okulda satıcıya nakit öde → Satıcı onaylar → ${isPack?'Kartlar random açılır':'Kart envantere eklenir'}</div></div>
         </div>
         <div class="rules-box"><h4>📋 Kurallar</h4><ul><li>Bu satın alım okul faaliyetiyle ilgili değildir.</li><li>Ödeme alıcı ve satıcı arasında özel yapılır.</li><li>Okul personeli sorumlu değildir.</li></ul></div>
         <label class="checkbox-row" style="margin-bottom:14px"><input type="checkbox" id="agreeRules"/>Kuralları okudum ve kabul ediyorum.</label>
@@ -538,14 +543,76 @@ function openBuyModal(itemId){
     qs('#confirmBuy').onclick=async()=>{
       if(!qs('#agreeRules').checked){const m=qs('#buyMsg');m.textContent='Kuralları kabul edin.';m.style.display='block';m.className='msg msg-err';return;}
       const qty=Math.min(parseInt(qs('#buyQty').value)||1,it.stock||1);
+      const btn=qs('#confirmBuy');btn.textContent='İşleniyor...';btn.disabled=true;
       try{
         await db.collection('items').doc(itemId).update({stock:firebase.firestore.FieldValue.increment(-qty)});
-        await db.collection('inventory').add({userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,itemId,title:it.title,cat:it.cat||'Single',price:it.price||0,qty,payMethod:'cash',status:'pending',sellerId:it.ownerId,sellerName:it.ownerName||'',addedAt:firebase.firestore.FieldValue.serverTimestamp()});
-        await db.collection('sellerNotifications').add({sellerId:it.ownerId,buyerId:currentUser.uid,buyerName:currentUser.displayName||currentUser.email,itemTitle:it.title,itemId,qty,payMethod:'cash',status:'pending',read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
-        closeModal();loadInventoryCount();showSuccessToast(it.title,qty);
-      }catch(e){const m=qs('#buyMsg');m.textContent='Hata: '+e.message;m.style.display='block';m.className='msg msg-err';}
+        if(isPack){
+          // Pack: random kart çek, her birini ayrı inventory item olarak ekle
+          const drawnCards=[];
+          for(let q=0;q<qty;q++){
+            const cards=pickPackCards(it.cardPool,it.packSize||5);
+            drawnCards.push(...cards);
+          }
+          for(const card of drawnCards){
+            await db.collection('inventory').add({
+              userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,
+              itemId,title:card.name,cat:'Single',rarity:card.rarity,
+              price:0,qty:1,payMethod:'cash',status:'pending',
+              fromPack:it.title,sellerId:it.ownerId,sellerName:it.ownerName||'',
+              addedAt:firebase.firestore.FieldValue.serverTimestamp()
+            });
+          }
+          await db.collection('sellerNotifications').add({
+            sellerId:it.ownerId,buyerId:currentUser.uid,
+            buyerName:currentUser.displayName||currentUser.email,
+            itemTitle:it.title,itemId,qty,payMethod:'cash',status:'pending',
+            isPack:true,packCardCount:drawnCards.length,read:false,
+            createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+          closeModal();loadInventoryCount();
+          showPackResult(drawnCards,it.title);
+        }else{
+          await db.collection('inventory').add({
+            userId:currentUser.uid,userName:currentUser.displayName||currentUser.email,
+            itemId,title:it.title,cat:it.cat||'Single',rarity:it.rarity||'C',
+            price:it.price||0,qty,payMethod:'cash',status:'pending',
+            sellerId:it.ownerId,sellerName:it.ownerName||'',
+            addedAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+          await db.collection('sellerNotifications').add({
+            sellerId:it.ownerId,buyerId:currentUser.uid,
+            buyerName:currentUser.displayName||currentUser.email,
+            itemTitle:it.title,itemId,qty,payMethod:'cash',status:'pending',
+            read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
+          });
+          closeModal();loadInventoryCount();showSuccessToast(it.title,qty);
+        }
+      }catch(e){const m=qs('#buyMsg');m.textContent='Hata: '+e.message;m.style.display='block';m.className='msg msg-err';btn.textContent='✓ Satın Almayı Onayla';btn.disabled=false;}
     };
   });
+}
+
+function showPackResult(cards,packName){
+  const rColors={C:'#757575',U:'#1565c0',R:'#6a1b9a',SR:'#e65100'};
+  const rBg={C:'#f5f5f5',U:'#e3f2fd',R:'#f3e5f5',SR:'#fff3e0'};
+  const cardHtml=cards.map(c=>`
+    <div style="background:${rBg[c.rarity]||'#f5f5f5'};border:2px solid ${rColors[c.rarity]||'#ddd'};border-radius:10px;padding:10px;text-align:center;animation:mIn .3s ease">
+      <div style="font-size:28px">🃏</div>
+      <div style="font-size:11px;font-weight:700;color:${rColors[c.rarity]};font-family:var(--mono)">${c.rarity}</div>
+      <div style="font-size:13px;font-weight:700;text-transform:uppercase;margin-top:2px">${esc(c.name)}</div>
+    </div>`).join('');
+  openModal(`
+    <div class="modal-head" style="background:linear-gradient(135deg,#e65100,#ff9800)"><h2>📦 Pack Açıldı!</h2><button class="modal-close" id="mc">✕</button></div>
+    <div class="modal-body">
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:14px">📦 ${esc(packName)} — ${cards.length} kart</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:14px">${cardHtml}</div>
+      <div style="background:#fff8e1;border:2px solid #ffb300;border-radius:8px;padding:10px;font-family:var(--mono);font-size:12px;color:#795548">
+        💵 Satıcıya nakit ödedikten sonra kartlar aktif hale gelecek.
+      </div>
+      <button class="btn btn-primary" id="mc2" style="width:100%;margin-top:14px">Tamam 🎉</button>
+    </div>`);
+  qs('#mc').onclick=closeModal;
+  qs('#mc2').onclick=closeModal;
 }
 function showSuccessToast(title,qty){
   const t=document.createElement('div');
@@ -554,11 +621,35 @@ function showSuccessToast(title,qty){
   document.body.appendChild(t);setTimeout(()=>t.remove(),5000);
 }
 
+/* ─── PACK HELPERS ─── */
+const RARITY_WEIGHTS={C:60,U:25,R:12,SR:3};
+function randomRarity(){
+  const r=Math.random()*100;
+  if(r<3)return'SR';
+  if(r<15)return'R';
+  if(r<40)return'U';
+  return'C';
+}
+function pickPackCards(cardPool,packSize){
+  if(!cardPool||cardPool.length===0)return[];
+  const results=[];
+  for(let i=0;i<packSize;i++){
+    const targetRarity=randomRarity();
+    const pool=cardPool.filter(c=>c.rarity===targetRarity);
+    if(pool.length>0){results.push({...pool[Math.floor(Math.random()*pool.length)]});}
+    else{results.push({...cardPool[Math.floor(Math.random()*cardPool.length)]});}
+  }
+  return results;
+}
+
+const ADMIN_EMAIL='urtugaz@gmail.com';
+function isAdmin(){return currentUser&&currentUser.email===ADMIN_EMAIL;}
+
 /* ─── SELL ─── */
-let _sellImgData=null;
+let _sellImgData=null,_sellCardPool=[];
 function showSellModal(){
   if(!currentUser)return showAuthModal();
-  _sellImgData=null;
+  _sellImgData=null;_sellCardPool=[];
   openModal(`
     <div class="modal-head"><h2>+ Kart Listele</h2><button class="modal-close" id="mc">✕</button></div>
     <div class="modal-body">
@@ -571,15 +662,41 @@ function showSellModal(){
       </div>
       <div class="form-field"><label class="form-label">Başlık</label><input id="sTitle" class="form-input" placeholder="Kart adı"/></div>
       <div class="form-field"><label class="form-label">Açıklama</label><textarea id="sDesc" class="form-input" placeholder="Kart detayları..."></textarea></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
         <div class="form-field"><label class="form-label">Fiyat (₺)</label><input id="sPrice" class="form-input" type="number" placeholder="0.00"/></div>
         <div class="form-field"><label class="form-label">Stok</label><input id="sStock" class="form-input" type="number" placeholder="1"/></div>
+        <div class="form-field"><label class="form-label">Rarity</label><select id="sRarity" class="form-input"><option value="C">Common</option><option value="U">Uncommon</option><option value="R">Rare</option><option value="SR">Secret Rare</option></select></div>
       </div>
-      <div class="form-field"><label class="form-label">Kategori</label><select id="sCat" class="form-input"><option>Single</option><option>Pack</option><option>Accessory</option><option>Bundle</option></select></div>
+      <div class="form-field"><label class="form-label">Kategori</label><select id="sCat" class="form-input" id="sCat">
+        <option>Single</option><option>Pack</option><option>Accessory</option><option>Bundle</option>
+      </select></div>
+      <div id="packPoolSection" style="display:none">
+        <div style="background:var(--blue-light);border:2px solid #c8d9ff;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📦 Pack İçeriği (Kart Havuzu)</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">Olasılık: SR %3 · R %12 · U %25 · C %60</div>
+          <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin-bottom:8px">
+            <input id="pCardName" class="form-input" placeholder="Kart adı" style="margin:0"/>
+            <select id="pCardRarity" class="form-input" style="margin:0;width:auto">
+              <option value="C">C</option><option value="U">U</option><option value="R">R</option><option value="SR">SR</option>
+            </select>
+            <input id="pPackSize" class="form-input" type="number" value="5" min="1" max="10" placeholder="Adet" style="margin:0;width:60px" title="Packten kaç kart çıksın"/>
+            <button class="btn btn-primary btn-sm" id="addCardBtn" style="white-space:nowrap">+ Ekle</button>
+          </div>
+          <div id="poolList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px"></div>
+        </div>
+      </div>
       <button class="btn btn-primary" id="doSell" style="width:100%">🚀 Listele</button>
       <div id="sellMsg" class="msg" style="display:none"></div>
     </div>`);
   qs('#mc').onclick=closeModal;
+  qs('#sCat').onchange=e=>{qs('#packPoolSection').style.display=e.target.value==='Pack'?'block':'none';};
+  qs('#addCardBtn').onclick=()=>{
+    const name=qs('#pCardName').value.trim(),rarity=qs('#pCardRarity').value;
+    if(!name)return;
+    _sellCardPool.push({name,rarity});
+    qs('#pCardName').value='';
+    renderPoolList('poolList',_sellCardPool);
+  };
   qs('#sImgFile').onchange=async e=>{
     const file=e.target.files[0];if(!file)return;
     const area=qs('#sImgArea');area.classList.add('has-img');
@@ -589,22 +706,39 @@ function showSellModal(){
   };
   qs('#doSell').onclick=async()=>{
     const title=qs('#sTitle').value.trim(),desc=qs('#sDesc').value.trim();
-    const price=parseFloat(qs('#sPrice').value),stock=parseInt(qs('#sStock').value),cat=qs('#sCat').value;
+    const price=parseFloat(qs('#sPrice').value),stock=parseInt(qs('#sStock').value);
+    const cat=qs('#sCat').value,rarity=qs('#sRarity').value;
+    const packSize=parseInt(qs('#pPackSize')?.value)||5;
     if(!title||isNaN(price)||price<0||isNaN(stock)||stock<0){const m=qs('#sellMsg');m.textContent='Tüm alanları doğru doldurun.';m.style.display='block';m.className='msg msg-err';return;}
+    if(cat==='Pack'&&_sellCardPool.length===0){const m=qs('#sellMsg');m.textContent='Pack için en az 1 kart ekleyin.';m.style.display='block';m.className='msg msg-err';return;}
     const btn=qs('#doSell');btn.textContent='Yükleniyor...';btn.disabled=true;
     try{
-      await db.collection('items').add({title,desc,price,stock,maxStock:stock,cat,imageUrl:_sellImgData||'',ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      await db.collection('items').add({title,desc,price,stock,maxStock:stock,cat,rarity,imageUrl:_sellImgData||'',cardPool:cat==='Pack'?_sellCardPool:[],packSize:cat==='Pack'?packSize:1,ownerId:currentUser.uid,ownerName:currentUser.displayName||currentUser.email,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
       closeModal();
     }catch(e){const m=qs('#sellMsg');m.textContent='Hata: '+e.message;m.style.display='block';m.className='msg msg-err';btn.textContent='🚀 Listele';btn.disabled=false;}
   };
 }
+function renderPoolList(elId,pool){
+  const el=qs('#'+elId);if(!el)return;
+  const rColors={C:'#757575',U:'#1565c0',R:'#6a1b9a',SR:'#e65100'};
+  el.innerHTML=pool.map((c,i)=>`<div style="display:flex;align-items:center;gap:4px;background:white;border:2px solid ${rColors[c.rarity]||'#ddd'};border-radius:6px;padding:3px 8px;font-size:12px;font-family:var(--mono)">
+    <span style="color:${rColors[c.rarity]};font-weight:700">${c.rarity}</span> ${esc(c.name)}
+    <span onclick="removePoolCard(${i},'${elId}')" style="cursor:pointer;color:#c62828;margin-left:4px;font-size:14px">✕</span>
+  </div>`).join('');
+}
+window.removePoolCard=function(i,elId){
+  if(elId==='poolList')_sellCardPool.splice(i,1),renderPoolList('poolList',_sellCardPool);
+  else if(elId==='ePoolList')_editCardPool.splice(i,1),renderPoolList('ePoolList',_editCardPool);
+};
 
 /* ─── EDIT ─── */
-let _editImgData=null;
+let _editImgData=null,_editCardPool=[];
 function openEditItem(itemId){
   db.collection('items').doc(itemId).get().then(doc=>{
     if(!doc.exists)return;const it=doc.data();
     _editImgData=it.imageUrl||null;
+    _editCardPool=[...(it.cardPool||[])];
+    const rOpts=['C','U','R','SR'].map(r=>`<option value="${r}"${it.rarity===r?' selected':''}>${{C:'Common',U:'Uncommon',R:'Rare',SR:'Secret Rare'}[r]}</option>`).join('');
     openModal(`
       <div class="modal-head"><h2>✏️ Düzenle</h2><button class="modal-close" id="mc">✕</button></div>
       <div class="modal-body">
@@ -616,20 +750,45 @@ function openEditItem(itemId){
         </div>
         <div class="form-field"><label class="form-label">Başlık</label><input id="eTitle" class="form-input" value="${esc(it.title)}"/></div>
         <div class="form-field"><label class="form-label">Açıklama</label><textarea id="eDesc" class="form-input">${esc(it.desc||'')}</textarea></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
           <div class="form-field"><label class="form-label">Fiyat</label><input id="ePrice" class="form-input" type="number" value="${it.price||0}"/></div>
           <div class="form-field"><label class="form-label">Stok</label><input id="eStock" class="form-input" type="number" value="${it.stock||0}"/></div>
+          <div class="form-field"><label class="form-label">Rarity</label><select id="eRarity" class="form-input">${rOpts}</select></div>
         </div>
         <div class="form-field"><label class="form-label">Kategori</label><select id="eCat" class="form-input">
           ${['Single','Pack','Accessory','Bundle'].map(c=>`<option${it.cat===c?' selected':''}>${c}</option>`).join('')}
         </select></div>
+        <div id="ePackSection" style="display:${it.cat==='Pack'?'block':'none'}">
+          <div style="background:var(--blue-light);border:2px solid #c8d9ff;border-radius:10px;padding:14px;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📦 Pack İçeriği</div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px">Olasılık: SR %3 · R %12 · U %25 · C %60</div>
+            <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin-bottom:8px">
+              <input id="epCardName" class="form-input" placeholder="Kart adı" style="margin:0"/>
+              <select id="epCardRarity" class="form-input" style="margin:0;width:auto">
+                <option value="C">C</option><option value="U">U</option><option value="R">R</option><option value="SR">SR</option>
+              </select>
+              <input id="ePackSize" class="form-input" type="number" value="${it.packSize||5}" min="1" max="10" style="margin:0;width:60px" title="Kaç kart çıksın"/>
+              <button class="btn btn-primary btn-sm" id="eAddCardBtn">+ Ekle</button>
+            </div>
+            <div id="ePoolList" style="display:flex;flex-wrap:wrap;gap:6px;min-height:30px"></div>
+          </div>
+        </div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary" id="doEdit" style="flex:1">Kaydet</button>
           <button class="btn" style="background:#fdecea;color:#c62828;border:none" id="doDelete">Sil</button>
         </div>
         <div id="editMsg" class="msg" style="display:none"></div>
       </div>`);
+    renderPoolList('ePoolList',_editCardPool);
     qs('#mc').onclick=closeModal;
+    qs('#eCat').onchange=e=>{qs('#ePackSection').style.display=e.target.value==='Pack'?'block':'none';};
+    qs('#eAddCardBtn').onclick=()=>{
+      const name=qs('#epCardName').value.trim(),rarity=qs('#epCardRarity').value;
+      if(!name)return;
+      _editCardPool.push({name,rarity});
+      qs('#epCardName').value='';
+      renderPoolList('ePoolList',_editCardPool);
+    };
     qs('#eImgFile').onchange=async e=>{
       const file=e.target.files[0];if(!file)return;
       _editImgData=await compressImage(file);
@@ -639,10 +798,14 @@ function openEditItem(itemId){
     };
     qs('#doEdit').onclick=async()=>{
       const title=qs('#eTitle').value.trim(),desc=qs('#eDesc').value.trim();
-      const price=parseFloat(qs('#ePrice').value),stock=parseInt(qs('#eStock').value),cat=qs('#eCat').value;
+      const price=parseFloat(qs('#ePrice').value),stock=parseInt(qs('#eStock').value);
+      const cat=qs('#eCat').value,rarity=qs('#eRarity').value;
+      const packSize=parseInt(qs('#ePackSize')?.value)||5;
       if(!title||isNaN(price)||isNaN(stock)){const m=qs('#editMsg');m.textContent='Hata.';m.style.display='block';m.className='msg msg-err';return;}
-      try{await db.collection('items').doc(itemId).update({title,desc,price,stock,cat,imageUrl:_editImgData||''});closeModal();}
-      catch(e){const m=qs('#editMsg');m.textContent='Hata: '+e.message;m.style.display='block';m.className='msg msg-err';}
+      try{
+        await db.collection('items').doc(itemId).update({title,desc,price,stock,cat,rarity,imageUrl:_editImgData||'',cardPool:cat==='Pack'?_editCardPool:[],packSize:cat==='Pack'?packSize:1});
+        closeModal();
+      }catch(e){const m=qs('#editMsg');m.textContent='Hata: '+e.message;m.style.display='block';m.className='msg msg-err';}
     };
     qs('#doDelete').onclick=async()=>{if(!confirm('Silmek istediğinize emin misiniz?'))return;await db.collection('items').doc(itemId).delete();closeModal();};
   });
