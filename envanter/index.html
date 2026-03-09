@@ -60,6 +60,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .status-pip{position:absolute;top:12px;left:12px;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 8px;border-radius:4px;z-index:3;}
 .pip-owned{background:#e8f5e9;color:#2e7d32;border:1px solid #a5d6a7;}
 .pip-pending{background:#fff8e1;color:#e65100;border:1px solid #ffcc02;}
+.pip-requested{background:#e3f2fd;color:#1565c0;border:1px solid #90caf9;}
 .poke-body{padding:12px;}
 .poke-name{font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;line-height:1.2;}
 .poke-cat{font-size:10px;font-family:var(--mono);color:var(--blue);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
@@ -68,15 +69,18 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .poke-price{font-size:14px;font-weight:700;color:var(--blue);}
 .poke-qty{background:var(--blue-light);color:var(--blue);border-radius:4px;padding:1px 8px;}
 
-/* ── AL BUTTON — büyük yeşil ── */
 .card-actions{padding:0 10px 10px;display:flex;gap:6px;}
 .btn-view{flex:1;font-size:11px;background:transparent;color:var(--text);border:2px solid var(--border);border-radius:7px;padding:7px;cursor:pointer;font-family:var(--font);font-weight:600;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;}
 .btn-view:hover{border-color:var(--blue);color:var(--blue);}
-.btn-al{flex:2;font-size:13px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:var(--font);font-weight:700;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;box-shadow:0 3px 12px rgba(46,125,50,0.35);display:flex;align-items:center;justify-content:center;gap:5px;}
-.btn-al:hover{background:linear-gradient(135deg,#2e7d32,#43a047);transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,125,50,0.5);}
+
+/* ── AL BUTTON — mavi, bildirim gönderir ── */
+.btn-al{flex:2;font-size:13px;background:linear-gradient(135deg,#0a4fa0,#0a6cf5);color:white;border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:var(--font);font-weight:700;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;box-shadow:0 3px 12px rgba(10,108,245,0.35);display:flex;align-items:center;justify-content:center;gap:5px;}
+.btn-al:hover{background:linear-gradient(135deg,#0a6cf5,#3d90f7);transform:translateY(-1px);box-shadow:0 6px 20px rgba(10,108,245,0.5);}
 .btn-al:active{transform:scale(0.97);}
-.btn-al.pending-disabled{background:linear-gradient(135deg,#757575,#9e9e9e);box-shadow:none;cursor:not-allowed;opacity:0.7;}
-.btn-al.pending-disabled:hover{transform:none;box-shadow:none;}
+.btn-al.disabled-state{background:linear-gradient(135deg,#757575,#9e9e9e);box-shadow:none;cursor:not-allowed;opacity:0.7;}
+.btn-al.disabled-state:hover{transform:none;box-shadow:none;}
+.btn-al.requested-state{background:linear-gradient(135deg,#1565c0,#42a5f5);box-shadow:none;cursor:not-allowed;opacity:0.85;}
+.btn-al.requested-state:hover{transform:none;}
 
 .pending-alert{background:linear-gradient(135deg,#fff8e1,#fff3cd);border:2px solid #ffb300;border-radius:12px;padding:16px 18px;margin-bottom:20px;}
 .pending-alert h3{font-size:15px;color:#e65100;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
@@ -100,12 +104,12 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .detail-val{font-weight:700;color:var(--text);}
 
 /* confirm box */
-.confirm-box{background:linear-gradient(135deg,#f1f8e9,#dcedc8);border:2px solid #8bc34a;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;}
-.confirm-box .cname{font-size:20px;font-weight:700;text-transform:uppercase;color:#1b5e20;margin-bottom:6px;}
-.confirm-box .cinfo{font-family:var(--mono);font-size:12px;color:#558b2f;}
+.confirm-box{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:2px solid #42a5f5;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;}
+.confirm-box .cname{font-size:20px;font-weight:700;text-transform:uppercase;color:#0d47a1;margin-bottom:6px;}
+.confirm-box .cinfo{font-family:var(--mono);font-size:12px;color:#1565c0;}
 .confirm-actions{display:flex;gap:10px;}
-.btn-confirm-al{flex:1;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--font);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;box-shadow:0 4px 16px rgba(46,125,50,0.4);transition:all .15s;}
-.btn-confirm-al:hover{background:linear-gradient(135deg,#2e7d32,#43a047);transform:translateY(-1px);}
+.btn-confirm-al{flex:1;background:linear-gradient(135deg,#0a4fa0,#0a6cf5);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--font);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;box-shadow:0 4px 16px rgba(10,108,245,0.4);transition:all .15s;}
+.btn-confirm-al:hover{background:linear-gradient(135deg,#0a6cf5,#3d90f7);transform:translateY(-1px);}
 .btn-cancel{flex:1;background:transparent;color:var(--muted);border:2px solid var(--border);border-radius:10px;padding:13px;font-family:var(--font);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:all .15s;}
 .btn-cancel:hover{border-color:#e53935;color:#e53935;}
 
@@ -160,6 +164,8 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 firebase.initializeApp({apiKey:"AIzaSyDzGTlPWmfz9gg-0EYvvNjZr0dJahTcMrg",authDomain:"ruzly-7af10.firebaseapp.com",projectId:"ruzly-7af10",storageBucket:"ruzly-7af10.appspot.com",messagingSenderId:"223649665023",appId:"1:223649665023:web:c963b16cf626c5184d61ca",measurementId:"G-X4NKTW89XH"});
 const auth=firebase.auth(), db=firebase.firestore();
 let currentUser=null, allInvItems=[], activeTab='all', cachedNotifs=[], unsubNotif=[], unsubNotif2=[];
+// Track which inventory items already have a pending buyRequest sent
+let sentRequests=new Set();
 
 const qs=s=>document.querySelector(s);
 const qsa=s=>document.querySelectorAll(s);
@@ -200,11 +206,22 @@ function renderGrid(){
   items.forEach(it=>{
     const rar=getRarity(it.rarity,it.price||0);
     const isPending=it.status==='pending';
+    // Check if user already sent a buy request for this inventory item
+    const alreadyRequested=sentRequests.has(it.id);
+    let pipClass='pip-owned', pipLabel='✓ Sahip';
+    if(isPending){pipClass='pip-pending';pipLabel='⏳ Bekliyor';}
+    else if(alreadyRequested){pipClass='pip-requested';pipLabel='📨 Talep Gönderildi';}
+
+    let btnClass='btn-al';
+    let btnContent='📨 KARTI İSTİYORUM';
+    if(isPending){btnClass='btn-al disabled-state';btnContent='⏳ Ödeme Bekleniyor';}
+    else if(alreadyRequested){btnClass='btn-al requested-state';btnContent='✅ Talep Gönderildi';}
+
     const d=document.createElement('div');
     d.className='poke-card rarity-'+rar;
     d.innerHTML=`
       <div class="rarity-strip strip-${rar}"></div>
-      <div class="status-pip ${isPending?'pip-pending':'pip-owned'}">${isPending?'⏳ Bekliyor':'✓ Sahip'}</div>
+      <div class="status-pip ${pipClass}">${pipLabel}</div>
       <div class="poke-img-wrap" style="background:${cardBg(it.cat)}">
         ${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="${esc(it.title)}"/>`:`<div class="no-img">${cardEmoji(it.cat)}</div>`}
         <span class="rarity-tag rtag-${rar}">${rar}</span>
@@ -220,30 +237,26 @@ function renderGrid(){
       </div>
       <div class="card-actions">
         <button class="btn-view vBtn">👁</button>
-        <button class="btn-al aBtn ${isPending?'pending-disabled':''}">
-          ${isPending?'⏳ Bekleniyor':'🤝 KARTI ALDIM'}
-        </button>
+        <button class="${btnClass} aBtn">${btnContent}</button>
       </div>`;
     d.querySelector('.vBtn').onclick=e=>{e.stopPropagation();showDetail(it);};
     d.querySelector('.aBtn').onclick=e=>{
       e.stopPropagation();
-      if(isPending){
-        toast('⏳ Bekleniyor','Satıcı teslim onayı bekleniyor.','#e65100');
-        return;
-      }
-      confirmAlKart(it);
+      if(isPending){toast('⏳ Ödeme Bekleniyor','Ödeme onaylandıktan sonra talep gönderebilirsin.','#e65100');return;}
+      if(alreadyRequested){toast('✅ Talep Zaten Gönderildi','Satıcının onayını bekliyorsun.','#1565c0');return;}
+      confirmIstemek(it);
     };
     grid.appendChild(d);
   });
 }
 
-/* ── CONFIRM AL MODAL — kart butonuna basınca açılır ── */
-function confirmAlKart(it){
+/* ── CONFIRM ISTEMEK MODAL — sadece bildirim gönderir, kartı silmez ── */
+function confirmIstemek(it){
   const rar=getRarity(it.rarity,it.price||0);
-  const hdBg={SR:'linear-gradient(135deg,#e65100,#ff9800)',R:'linear-gradient(135deg,#6a1b9a,#9c27b0)',U:'linear-gradient(135deg,#1565c0,#42a5f5)'}[rar]||'linear-gradient(135deg,#1b5e20,#2e7d32)';
+  const hdBg={SR:'linear-gradient(135deg,#e65100,#ff9800)',R:'linear-gradient(135deg,#6a1b9a,#9c27b0)',U:'linear-gradient(135deg,#1565c0,#42a5f5)'}[rar]||'linear-gradient(135deg,#0a4fa0,#0a6cf5)';
   openModal(`
     <div class="modal-head" style="background:${hdBg}">
-      <h2>🤝 Kartı Al</h2>
+      <h2>📨 Kartı İstiyorum</h2>
       <button class="modal-close" id="mc">✕</button>
     </div>
     <div class="modal-body">
@@ -252,26 +265,50 @@ function confirmAlKart(it){
         :`<div style="width:100%;height:120px;background:${cardBg(it.cat)};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:16px">${cardEmoji(it.cat)}</div>`}
       <div class="confirm-box">
         <div class="cname">${esc(it.title)}</div>
-        <div class="cinfo">Kartı gerçek hayatta aldın mı?<br>Onaylarsan envanterinden silinecek.</div>
+        <div class="cinfo">Satıcıya "Bu kartı gerçek hayatta almak istiyorum" bildirimi gönderilecek.<br><br>Satıcı teslim edince envanterinden silinecek.</div>
       </div>
       <div class="confirm-actions">
         <button class="btn-cancel" id="cancelBtn">❌ Vazgeç</button>
-        <button class="btn-confirm-al" id="doAlBtn">✅ Evet, Aldım!</button>
+        <button class="btn-confirm-al" id="doSendBtn">📨 Talep Gönder</button>
       </div>
     </div>`);
   qs('#mc').onclick=closeModal;
   qs('#cancelBtn').onclick=closeModal;
-  qs('#doAlBtn').onclick=async()=>{
-    qs('#doAlBtn').disabled=true;
-    qs('#doAlBtn').textContent='⏳ Siliniyor...';
+  qs('#doSendBtn').onclick=async()=>{
+    qs('#doSendBtn').disabled=true;
+    qs('#doSendBtn').textContent='⏳ Gönderiliyor...';
     try{
-      await db.collection('inventory').doc(it.id).delete();
+      // Write a buyRequest notification for the seller
+      // sellerId is stored on the inventory item (sellerUid or sellerId)
+      const sellerId=it.sellerUid||it.sellerId||it.sellerEmail||null;
+      await db.collection('buyRequests').add({
+        inventoryId: it.id,
+        itemId: it.itemId||it.id,
+        itemTitle: it.title||'',
+        itemRarity: getRarity(it.rarity,it.price||0),
+        itemPrice: it.price||0,
+        imageUrl: it.imageUrl||'',
+        qty: it.qty||1,
+        // buyer info
+        buyerId: currentUser.uid,
+        buyerName: currentUser.displayName||currentUser.email.split('@')[0],
+        buyerEmail: currentUser.email,
+        // seller info
+        sellerId: sellerId,
+        sellerName: it.sellerName||'',
+        // status & time
+        status: 'pending',
+        read: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      // Mark locally so button state updates immediately
+      sentRequests.add(it.id);
       closeModal();
-      toast('✅ Kart Alındı!',it.title+' envanterden silindi.','#2e7d32');
-      await loadInventory();
+      toast('📨 Talep Gönderildi!','Satıcı seni haberdar edecek.','#0a6cf5');
+      renderGrid(); // re-render to update button state
     }catch(e){
-      qs('#doAlBtn').disabled=false;
-      qs('#doAlBtn').textContent='✅ Evet, Aldım!';
+      qs('#doSendBtn').disabled=false;
+      qs('#doSendBtn').textContent='📨 Talep Gönder';
       alert('Hata: '+e.message);
     }
   };
@@ -313,6 +350,7 @@ async function loadInventory(){
   if(!currentUser){qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">🔐</div>Giriş yaparak envanterinizi görün.</div>`;return;}
   qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon" style="display:inline-block;animation:spin 1s linear infinite">⏳</div><div style="margin-top:8px">Yükleniyor...</div></div>`;
   try{
+    // Load inventory items
     const snap=await db.collection('inventory').where('userId','==',currentUser.uid).get();
     const base=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.addedAt?.seconds||0)-(a.addedAt?.seconds||0));
     allInvItems=await Promise.all(base.map(async inv=>{
@@ -322,10 +360,15 @@ async function loadInventory(){
       }catch(e){}
       return inv;
     }));
+
+    // Load already-sent buy requests so we can show correct button state
+    const reqSnap=await db.collection('buyRequests').where('buyerId','==',currentUser.uid).where('status','==','pending').get();
+    sentRequests=new Set(reqSnap.docs.map(d=>d.data().inventoryId).filter(Boolean));
+
     const pending=allInvItems.filter(i=>i.status==='pending');
     if(pending.length){
       qs('#pendingAlert').style.display='block';
-      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen</h3><p>Satıcı teslimat onayı bekleniyor. Onay gelince "KARTI ALDIM" butonu aktif olur.</p></div>`;
+      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen</h3><p>Ödeme onayı bekleniyor. Onaylandıktan sonra "KARTI İSTİYORUM" butonuna basabilirsin.</p></div>`;
     }else{qs('#pendingAlert').style.display='none';}
     qs('#pageSubtitle').textContent='// '+allInvItems.length+' kart — '+pending.length+' bekleyen';
     renderGrid();
@@ -334,7 +377,7 @@ async function loadInventory(){
   }
 }
 
-/* ── NOTIFICATIONS ── */
+/* ── NOTIFICATIONS (seller side — unchanged) ── */
 function listenNotifications(){
   unsubNotif.forEach(f=>f());unsubNotif2.forEach(f=>f());unsubNotif=[];unsubNotif2=[];
   if(!currentUser)return;
@@ -349,33 +392,89 @@ function listenNotifications(){
   const u1=db.collection('sellerNotifications').where('sellerId','==',currentUser.uid).onSnapshot(s=>refresh(s.docs),e=>console.error('n1',e.message));
   const u2=db.collection('sellerNotifications').where('sellerId','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n2',e.message));
   const u3=db.collection('sellerNotifications').where('sellerEmail','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n3',e.message));
-  unsubNotif.push(u1);unsubNotif2.push(u2,u3);
+
+  // Also listen for buyRequests directed at this seller so they appear in 🔔
+  const u4=db.collection('buyRequests').where('sellerId','==',currentUser.uid).where('read','==',false).onSnapshot(s=>{
+    s.docs.forEach(d=>all['br_'+d.id]={id:'br_'+d.id,_rawId:d.id,_isBuyRequest:true,...d.data()});
+    refresh([]);
+  },e=>console.error('br',e.message));
+  const u5=db.collection('buyRequests').where('sellerEmail','==',currentUser.email).where('read','==',false).onSnapshot(s=>{
+    s.docs.forEach(d=>all['br_'+d.id]={id:'br_'+d.id,_rawId:d.id,_isBuyRequest:true,...d.data()});
+    refresh([]);
+  },e=>console.error('br2',e.message));
+
+  unsubNotif.push(u1,u4,u5);unsubNotif2.push(u2,u3);
 }
 
 qs('#notifBtn').onclick=showNotifModal;
 function showNotifModal(){
   if(!currentUser){openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><p style="font-family:var(--mono)">Giriş yapın.</p></div>`);qs('#mc').onclick=closeModal;return;}
   if(!cachedNotifs.length){openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:30px">Yeni bildirim yok.</div></div>`);qs('#mc').onclick=closeModal;return;}
-  const rows=cachedNotifs.map(n=>`
-    <div style="border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
-      <div style="font-size:15px;font-weight:700">👤 ${esc(n.buyerName||'Alıcı')}</div>
-      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1} — 💵 Nakit</div>
-      ${n.deliveryDay
-        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)}</strong></div>
-          <button class="btn btn-primary btn-sm confirmBtn" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Teslim Ettim — Onayla</button>`
-        :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Teslimat günü belirle</div>
+
+  const rows=cachedNotifs.map(n=>{
+    // ── BuyRequest bildirimi (alıcının "istiyorum" talebi) ──
+    if(n._isBuyRequest){
+      return `
+        <div style="border:2px solid #90caf9;border-radius:10px;padding:14px;margin-bottom:10px;background:#e3f2fd">
+          <div style="font-size:15px;font-weight:700;color:#0d47a1">📨 Teslim Talebi</div>
+          <div style="font-family:var(--mono);font-size:12px;color:#1565c0;margin:4px 0">👤 ${esc(n.buyerName||'Alıcı')} — ${esc(n.itemTitle)} × ${n.qty||1}</div>
+          ${n.itemPrice?`<div style="font-family:var(--mono);font-size:11px;color:#555">💵 ${money(n.itemPrice)}</div>`:''}
+          <div style="background:#fff;border:1.5px solid #90caf9;border-radius:7px;padding:8px;margin:8px 0;font-family:var(--mono);font-size:11px;color:#1565c0">
+            Bu kullanıcı kartı gerçek hayatta almak istiyor. Teslim et ve onayla.
+          </div>
           <div style="display:flex;gap:8px;margin-top:6px">
-            <select class="daySelect" data-id="${n.id}" style="flex:1;padding:7px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:12px">
-              <option value="">Gün Seç...</option>
-              <option>Yarın</option><option>2 gün</option><option>3 gün</option><option>5 gün</option><option>1 hafta</option>
-            </select>
-            <button class="btn btn-primary btn-sm setBtn" data-id="${n.id}">Al ✓</button>
-          </div>`
-      }
-      <button class="btn btn-ghost btn-sm closeBtn" data-id="${n.id}" style="margin-top:8px">Kapat</button>
-    </div>`).join('');
-  openModal(`<div class="modal-head"><h2>🔔 Satıcı Bildirimleri (${cachedNotifs.length})</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body">${rows}</div>`);
+            <button class="btn btn-primary btn-sm confirmBRBtn" data-rawid="${n._rawId}" data-invid="${esc(n.inventoryId)}" data-uid="${esc(n.buyerId)}">✓ Teslim Ettim</button>
+            <button class="btn btn-ghost btn-sm closeBRBtn" data-rawid="${n._rawId}">Kapat</button>
+          </div>
+        </div>`;
+    }
+    // ── Eski sellerNotification bildirimi ──
+    return `
+      <div style="border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="font-size:15px;font-weight:700">👤 ${esc(n.buyerName||'Alıcı')}</div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1} — 💵 Nakit</div>
+        ${n.deliveryDay
+          ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)}</strong></div>
+            <button class="btn btn-primary btn-sm confirmBtn" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Teslim Ettim — Onayla</button>`
+          :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Teslimat günü belirle</div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <select class="daySelect" data-id="${n.id}" style="flex:1;padding:7px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:12px">
+                <option value="">Gün Seç...</option>
+                <option>Yarın</option><option>2 gün</option><option>3 gün</option><option>5 gün</option><option>1 hafta</option>
+              </select>
+              <button class="btn btn-primary btn-sm setBtn" data-id="${n.id}">Al ✓</button>
+            </div>`
+        }
+        <button class="btn btn-ghost btn-sm closeBtn" data-id="${n.id}" style="margin-top:8px">Kapat</button>
+      </div>`;
+  }).join('');
+
+  openModal(`<div class="modal-head"><h2>🔔 Bildirimler (${cachedNotifs.length})</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body">${rows}</div>`);
   qs('#mc').onclick=closeModal;
+
+  // BuyRequest: teslim et
+  qsa('.confirmBRBtn').forEach(b=>b.onclick=async()=>{
+    b.disabled=true;b.textContent='⏳...';
+    try{
+      const batch=db.batch();
+      // Mark buyRequest as fulfilled
+      batch.update(db.collection('buyRequests').doc(b.dataset.rawid),{status:'fulfilled',read:true});
+      // Delete the inventory item (kart teslim edildi)
+      if(b.dataset.invid){batch.delete(db.collection('inventory').doc(b.dataset.invid));}
+      await batch.commit();
+      showNotifModal();
+      toast('✓ Teslim Edildi!','Kart envanterden silindi.','#2e7d32');
+      await loadInventory();
+    }catch(e){alert('Hata: '+e.message);}
+  });
+
+  // BuyRequest: kapat
+  qsa('.closeBRBtn').forEach(b=>b.onclick=async()=>{
+    await db.collection('buyRequests').doc(b.dataset.rawid).update({read:true});
+    showNotifModal();
+  });
+
+  // Old sellerNotification handlers
   qsa('.closeBtn').forEach(b=>b.onclick=async()=>{await db.collection('sellerNotifications').doc(b.dataset.id).update({read:true});showNotifModal();});
   qsa('.setBtn').forEach(b=>b.onclick=async()=>{
     const sel=qs('.daySelect[data-id="'+b.dataset.id+'"]');
