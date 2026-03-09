@@ -67,12 +67,25 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .poke-footer{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-top:1px solid #f0f0f0;font-family:var(--mono);font-size:11px;color:var(--muted);}
 .poke-price{font-size:14px;font-weight:700;color:var(--blue);}
 .poke-qty{background:var(--blue-light);color:var(--blue);border-radius:4px;padding:1px 8px;}
+
+/* ── AL BUTTON — büyük yeşil ── */
+.card-actions{padding:0 10px 10px;display:flex;gap:6px;}
+.btn-view{flex:1;font-size:11px;background:transparent;color:var(--text);border:2px solid var(--border);border-radius:7px;padding:7px;cursor:pointer;font-family:var(--font);font-weight:600;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;}
+.btn-view:hover{border-color:var(--blue);color:var(--blue);}
+.btn-al{flex:2;font-size:13px;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:7px;padding:9px 12px;cursor:pointer;font-family:var(--font);font-weight:700;letter-spacing:.5px;text-transform:uppercase;transition:all .15s;box-shadow:0 3px 12px rgba(46,125,50,0.35);display:flex;align-items:center;justify-content:center;gap:5px;}
+.btn-al:hover{background:linear-gradient(135deg,#2e7d32,#43a047);transform:translateY(-1px);box-shadow:0 6px 20px rgba(46,125,50,0.5);}
+.btn-al:active{transform:scale(0.97);}
+.btn-al.pending-disabled{background:linear-gradient(135deg,#757575,#9e9e9e);box-shadow:none;cursor:not-allowed;opacity:0.7;}
+.btn-al.pending-disabled:hover{transform:none;box-shadow:none;}
+
 .pending-alert{background:linear-gradient(135deg,#fff8e1,#fff3cd);border:2px solid #ffb300;border-radius:12px;padding:16px 18px;margin-bottom:20px;}
 .pending-alert h3{font-size:15px;color:#e65100;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
 .pending-alert p{font-family:var(--mono);font-size:12px;color:#795548;}
 .empty{text-align:center;padding:60px 20px;color:var(--muted);font-family:var(--mono);font-size:13px;grid-column:1/-1;}
 .empty-icon{font-size:56px;margin-bottom:12px;}
-.modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
+
+/* ── CONFIRM MODAL ── */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(6px);display:none;align-items:center;justify-content:center;z-index:200;padding:20px;}
 .modal-back.open{display:flex;}
 .modal{background:var(--white);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.25);animation:mIn .2s cubic-bezier(.4,0,.2,1);}
 @keyframes mIn{from{opacity:0;transform:scale(.95) translateY(10px)}}
@@ -85,6 +98,17 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 .detail-row:last-child{border:none;}
 .detail-key{color:var(--muted);}
 .detail-val{font-weight:700;color:var(--text);}
+
+/* confirm box */
+.confirm-box{background:linear-gradient(135deg,#f1f8e9,#dcedc8);border:2px solid #8bc34a;border-radius:12px;padding:20px;text-align:center;margin-bottom:16px;}
+.confirm-box .cname{font-size:20px;font-weight:700;text-transform:uppercase;color:#1b5e20;margin-bottom:6px;}
+.confirm-box .cinfo{font-family:var(--mono);font-size:12px;color:#558b2f;}
+.confirm-actions{display:flex;gap:10px;}
+.btn-confirm-al{flex:1;background:linear-gradient(135deg,#1b5e20,#2e7d32);color:white;border:none;border-radius:10px;padding:13px;font-family:var(--font);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;box-shadow:0 4px 16px rgba(46,125,50,0.4);transition:all .15s;}
+.btn-confirm-al:hover{background:linear-gradient(135deg,#2e7d32,#43a047);transform:translateY(-1px);}
+.btn-cancel{flex:1;background:transparent;color:var(--muted);border:2px solid var(--border);border-radius:10px;padding:13px;font-family:var(--font);font-size:14px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;transition:all .15s;}
+.btn-cancel:hover{border-color:#e53935;color:#e53935;}
+
 ::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:#ccc;border-radius:3px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 </style>
@@ -124,6 +148,7 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
   </div>
 </div>
 
+<!-- MODAL -->
 <div class="modal-back" id="modalBack">
   <div class="modal" id="modalContent"></div>
 </div>
@@ -174,11 +199,12 @@ function renderGrid(){
   grid.innerHTML='';
   items.forEach(it=>{
     const rar=getRarity(it.rarity,it.price||0);
+    const isPending=it.status==='pending';
     const d=document.createElement('div');
     d.className='poke-card rarity-'+rar;
     d.innerHTML=`
       <div class="rarity-strip strip-${rar}"></div>
-      <div class="status-pip ${it.status==='pending'?'pip-pending':'pip-owned'}">${it.status==='pending'?'⏳ Bekliyor':'✓ Sahip'}</div>
+      <div class="status-pip ${isPending?'pip-pending':'pip-owned'}">${isPending?'⏳ Bekliyor':'✓ Sahip'}</div>
       <div class="poke-img-wrap" style="background:${cardBg(it.cat)}">
         ${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="${esc(it.title)}"/>`:`<div class="no-img">${cardEmoji(it.cat)}</div>`}
         <span class="rarity-tag rtag-${rar}">${rar}</span>
@@ -192,24 +218,63 @@ function renderGrid(){
         <div class="poke-price">${it.price?money(it.price):'—'}</div>
         <div class="poke-qty">${it.qty||1}×</div>
       </div>
-      <div style="padding:0 10px 10px;display:flex;gap:6px">
-        <button class="btn btn-ghost btn-sm vBtn" style="flex:1;font-size:11px">👁 Görüntüle</button>
-        <button class="btn btn-sm aBtn" style="flex:1;font-size:11px;background:#2e7d32;color:white;border:none">🤝 Al</button>
+      <div class="card-actions">
+        <button class="btn-view vBtn">👁</button>
+        <button class="btn-al aBtn ${isPending?'pending-disabled':''}">
+          ${isPending?'⏳ Bekleniyor':'🤝 KARTI ALDIM'}
+        </button>
       </div>`;
     d.querySelector('.vBtn').onclick=e=>{e.stopPropagation();showDetail(it);};
-    d.querySelector('.aBtn').onclick=e=>{e.stopPropagation();alKart(it);};
+    d.querySelector('.aBtn').onclick=e=>{
+      e.stopPropagation();
+      if(isPending){
+        toast('⏳ Bekleniyor','Satıcı teslim onayı bekleniyor.','#e65100');
+        return;
+      }
+      confirmAlKart(it);
+    };
     grid.appendChild(d);
   });
 }
 
-/* ── AL KARTI ── */
-async function alKart(it){
-  if(!window.confirm('"'+it.title+'" kartını gerçekten aldın mı? Envanterden silinecek.'))return;
-  try{
-    await db.collection('inventory').doc(it.id).delete();
-    toast('✓ Kart Alındı!',it.title,'#2e7d32');
-    await loadInventory();
-  }catch(e){alert('Hata: '+e.message);}
+/* ── CONFIRM AL MODAL — kart butonuna basınca açılır ── */
+function confirmAlKart(it){
+  const rar=getRarity(it.rarity,it.price||0);
+  const hdBg={SR:'linear-gradient(135deg,#e65100,#ff9800)',R:'linear-gradient(135deg,#6a1b9a,#9c27b0)',U:'linear-gradient(135deg,#1565c0,#42a5f5)'}[rar]||'linear-gradient(135deg,#1b5e20,#2e7d32)';
+  openModal(`
+    <div class="modal-head" style="background:${hdBg}">
+      <h2>🤝 Kartı Al</h2>
+      <button class="modal-close" id="mc">✕</button>
+    </div>
+    <div class="modal-body">
+      ${it.imageUrl
+        ?`<img src="${esc(it.imageUrl)}" style="width:100%;max-height:220px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:16px"/>`
+        :`<div style="width:100%;height:120px;background:${cardBg(it.cat)};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:16px">${cardEmoji(it.cat)}</div>`}
+      <div class="confirm-box">
+        <div class="cname">${esc(it.title)}</div>
+        <div class="cinfo">Kartı gerçek hayatta aldın mı?<br>Onaylarsan envanterinden silinecek.</div>
+      </div>
+      <div class="confirm-actions">
+        <button class="btn-cancel" id="cancelBtn">❌ Vazgeç</button>
+        <button class="btn-confirm-al" id="doAlBtn">✅ Evet, Aldım!</button>
+      </div>
+    </div>`);
+  qs('#mc').onclick=closeModal;
+  qs('#cancelBtn').onclick=closeModal;
+  qs('#doAlBtn').onclick=async()=>{
+    qs('#doAlBtn').disabled=true;
+    qs('#doAlBtn').textContent='⏳ Siliniyor...';
+    try{
+      await db.collection('inventory').doc(it.id).delete();
+      closeModal();
+      toast('✅ Kart Alındı!',it.title+' envanterden silindi.','#2e7d32');
+      await loadInventory();
+    }catch(e){
+      qs('#doAlBtn').disabled=false;
+      qs('#doAlBtn').textContent='✅ Evet, Aldım!';
+      alert('Hata: '+e.message);
+    }
+  };
 }
 
 /* ── DETAIL ── */
@@ -238,8 +303,8 @@ function showDetail(it){
 /* ── TOAST ── */
 function toast(title,sub,color){
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid '+color+';border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;';
-  t.innerHTML='<div style="font-weight:700;color:'+color+'">'+title+'</div><div style="font-size:12px;margin-top:4px">'+esc(sub)+'</div>';
+  t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid '+color+';border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;animation:mIn .2s ease;';
+  t.innerHTML='<div style="font-weight:700;color:'+color+'">'+title+'</div><div style="font-size:12px;margin-top:4px;font-family:var(--mono);color:#555">'+esc(sub)+'</div>';
   document.body.appendChild(t);setTimeout(()=>t.remove(),3500);
 }
 
@@ -260,7 +325,7 @@ async function loadInventory(){
     const pending=allInvItems.filter(i=>i.status==='pending');
     if(pending.length){
       qs('#pendingAlert').style.display='block';
-      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen</h3><p>Satıcı teslimat onayı bekleniyor.</p></div>`;
+      qs('#pendingAlert').innerHTML=`<div class="pending-alert"><h3>⏳ ${pending.length} Bekleyen</h3><p>Satıcı teslimat onayı bekleniyor. Onay gelince "KARTI ALDIM" butonu aktif olur.</p></div>`;
     }else{qs('#pendingAlert').style.display='none';}
     qs('#pageSubtitle').textContent='// '+allInvItems.length+' kart — '+pending.length+' bekleyen';
     renderGrid();
@@ -271,9 +336,7 @@ async function loadInventory(){
 
 /* ── NOTIFICATIONS ── */
 function listenNotifications(){
-  unsubNotif.forEach(f=>f());
-  unsubNotif2.forEach(f=>f());
-  unsubNotif=[];unsubNotif2=[];
+  unsubNotif.forEach(f=>f());unsubNotif2.forEach(f=>f());unsubNotif=[];unsubNotif2=[];
   if(!currentUser)return;
   const all={};
   function refresh(docs){
@@ -283,11 +346,8 @@ function listenNotifications(){
     if(cachedNotifs.length){badge.style.display='inline-block';badge.textContent=cachedNotifs.length;}
     else{badge.style.display='none';}
   }
-  // by UID
   const u1=db.collection('sellerNotifications').where('sellerId','==',currentUser.uid).onSnapshot(s=>refresh(s.docs),e=>console.error('n1',e.message));
-  // by email as sellerId (eski itemlar için)
   const u2=db.collection('sellerNotifications').where('sellerId','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n2',e.message));
-  // by sellerEmail field
   const u3=db.collection('sellerNotifications').where('sellerEmail','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n3',e.message));
   unsubNotif.push(u1);unsubNotif2.push(u2,u3);
 }
