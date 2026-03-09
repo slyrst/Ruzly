@@ -228,191 +228,144 @@ button,.btn{font-family:var(--font);font-size:14px;font-weight:600;letter-spacin
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 <script>
-const firebaseConfig={
-  apiKey:"AIzaSyDzGTlPWmfz9gg-0EYvvNjZr0dJahTcMrg",
-  authDomain:"ruzly-7af10.firebaseapp.com",
-  projectId:"ruzly-7af10",
-  storageBucket:"ruzly-7af10.appspot.com",
-  messagingSenderId:"223649665023",
-  appId:"1:223649665023:web:c963b16cf626c5184d61ca",
-  measurementId:"G-X4NKTW89XH"
-};
+const firebaseConfig={apiKey:"AIzaSyDzGTlPWmfz9gg-0EYvvNjZr0dJahTcMrg",authDomain:"ruzly-7af10.firebaseapp.com",projectId:"ruzly-7af10",storageBucket:"ruzly-7af10.appspot.com",messagingSenderId:"223649665023",appId:"1:223649665023:web:c963b16cf626c5184d61ca",measurementId:"G-X4NKTW89XH"};
 firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth();
 const db=firebase.firestore();
-let currentUser=null;
-let allInvItems=[];
-let activeTab='all';
-let notifUnsub=null;
-let cachedNotifs=[];
-
+let currentUser=null,allInvItems=[],activeTab='all',notifUnsub=null,cachedNotifs=[];
 const qs=s=>document.querySelector(s);
 const qsa=s=>document.querySelectorAll(s);
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function money(n){return '₺'+Number(n||0).toFixed(2);}
-
 function openModal(html){qs('#modalContent').innerHTML=html;qs('#modalBack').classList.add('open');}
 function closeModal(){qs('#modalBack').classList.remove('open');qs('#modalContent').innerHTML='';}
 qs('#modalBack').addEventListener('click',e=>{if(e.target===qs('#modalBack'))closeModal();});
 
-/* ─── RARITY ─── */
-function getRarity(price){
+function getRarity(r,price){
+  if(r&&['C','U','R','SR'].includes(r))return r;
   if(price>=500)return'SR';
   if(price>=100)return'R';
   if(price>=25)return'U';
   return'C';
 }
-function rarityLabel(r){const m={C:'Common',U:'Uncommon',R:'Rare',SR:'Secret Rare'};return m[r]||r;}
-function cardEmoji(cat){const m={Pack:'📦',Single:'🃏',Accessory:'🧢',Bundle:'🎁'};return m[cat]||'🎴';}
-function cardBg(cat){const m={Pack:'linear-gradient(135deg,#fff3e0,#ffe0b2)',Single:'linear-gradient(135deg,#e3f2fd,#bbdefb)',Accessory:'linear-gradient(135deg,#f3e5f5,#e1bee7)',Bundle:'linear-gradient(135deg,#e8f5e9,#c8e6c9)'};return m[cat]||'linear-gradient(135deg,#f5f5f5,#eee)';}
+function rarityLabel(r){return{C:'Common',U:'Uncommon',R:'Rare',SR:'Secret Rare'}[r]||r;}
+function cardEmoji(cat){return{Pack:'📦',Single:'🃏',Accessory:'🧢',Bundle:'🎁'}[cat]||'🎴';}
+function cardBg(cat){return{Pack:'linear-gradient(135deg,#fff3e0,#ffe0b2)',Single:'linear-gradient(135deg,#e3f2fd,#bbdefb)',Accessory:'linear-gradient(135deg,#f3e5f5,#e1bee7)',Bundle:'linear-gradient(135deg,#e8f5e9,#c8e6c9)'}[cat]||'linear-gradient(135deg,#f5f5f5,#eee)';}
 
-/* ─── RENDER ─── */
 function setTab(tab){
   activeTab=tab;
   qsa('.tab').forEach(t=>t.classList.remove('active'));
   qs('#tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
   renderGrid();
 }
+
 function renderGrid(){
   const grid=qs('#cardGrid');
   let items=allInvItems.slice();
   if(activeTab==='owned')items=items.filter(i=>i.status==='owned');
   if(activeTab==='pending')items=items.filter(i=>i.status==='pending');
-  if(items.length===0){grid.innerHTML=`<div class="empty"><div class="empty-icon">${activeTab==='pending'?'⏳':'✨'}</div>${activeTab==='pending'?'Bekleyen sipariş yok.':'Henüz kart yok. Mağazadan satın alın!'}</div>`;return;}
+  if(items.length===0){
+    grid.innerHTML=`<div class="empty"><div class="empty-icon">${activeTab==='pending'?'⏳':'✨'}</div>${activeTab==='pending'?'Bekleyen sipariş yok.':'Henüz kart yok. Mağazadan satın alın!'}</div>`;
+    return;
+  }
   grid.innerHTML='';
   items.forEach(it=>{
-    const rarity=getRarity(it.price||0);
+    const rarity=getRarity(it.rarity,it.price||0);
     const div=document.createElement('div');
     div.className=`poke-card rarity-${rarity}`;
     div.innerHTML=`
       <div class="rarity-strip strip-${rarity}"></div>
       <div class="status-pip ${it.status==='pending'?'pip-pending':'pip-owned'}">${it.status==='pending'?'⏳ Bekliyor':'✓ Sahip'}</div>
       <div class="poke-img-wrap" style="background:${cardBg(it.cat)}">
-        ${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="${esc(it.title)}" />`:`<div class="no-img">${cardEmoji(it.cat)}</div>`}
+        ${it.imageUrl?`<img src="${esc(it.imageUrl)}" alt="${esc(it.title)}"/>`:`<div class="no-img">${cardEmoji(it.cat)}</div>`}
         <span class="rarity-tag rtag-${rarity}">${rarity}</span>
       </div>
       <div class="poke-body">
         <div class="poke-name">${esc(it.title)}</div>
-        <div class="poke-cat">${esc(it.cat||'Single')}</div>
-        <div class="poke-desc">${esc(it.desc||'Açıklama yok.')}</div>
+        <div class="poke-cat">${esc(it.fromPack?'📦 '+it.fromPack:it.cat||'Single')}</div>
+        <div class="poke-desc">${esc(it.desc||'')}</div>
       </div>
       <div class="poke-footer">
-        <div class="poke-price">${money(it.price||0)}</div>
+        <div class="poke-price">${it.price?money(it.price):'—'}</div>
         <div class="poke-qty">${it.qty||1}×</div>
       </div>
       <div style="padding:0 10px 10px;display:flex;gap:6px">
         <button class="btn btn-ghost btn-sm viewCardBtn" style="flex:1;font-size:11px">👁 Görüntüle</button>
-        ${it.status==='pending'?`<button class="btn btn-primary btn-sm alKartiBtn" style="flex:1;font-size:11px;background:#2e7d32">🤝 Al</button>`:''}
+        ${it.status==='pending'?`<button class="btn btn-primary btn-sm alBtn" style="flex:1;font-size:11px;background:#2e7d32;box-shadow:none">🤝 Al</button>`:''}
       </div>`;
     div.querySelector('.viewCardBtn').onclick=e=>{e.stopPropagation();showCardDetail(it);};
     if(it.status==='pending'){
-      div.querySelector('.alKartiBtn').onclick=e=>{e.stopPropagation();sendPickupRequest(it);};
+      div.querySelector('.alBtn').onclick=e=>{e.stopPropagation();sendPickupRequest(it);};
     }
     grid.appendChild(div);
   });
 }
 
-async function sendPickupRequest(it){
-  if(!currentUser)return;
-  if(!confirm(`"${it.title}" kartını okulda teslim almak istediğini satıcıya bildirmek istiyor musun?`))return;
-  try{
-    await db.collection('sellerNotifications').add({
-      sellerId:it.sellerId,
-      buyerId:currentUser.uid,
-      buyerName:currentUser.displayName||currentUser.email,
-      itemTitle:it.title,
-      itemId:it.itemId,
-      qty:it.qty||1,
-      payMethod:'cash',
-      status:'pickup_request',
-      type:'pickup',
-      read:false,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    // Show toast
-    const t=document.createElement('div');
-    t.style.cssText=`position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);animation:mIn .2s ease;max-width:300px;`;
-    t.innerHTML=`<div style="font-weight:700;font-size:15px;text-transform:uppercase;color:#2e7d32">✓ Satıcıya Bildirildi!</div><div style="font-size:13px;margin-top:4px">${esc(it.title)}</div><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px">Satıcı kartı sana verecek ve onaylayacak.</div>`;
-    document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
-  }catch(e){alert('Hata: '+e.message);}
-}
-
-  const rarity=getRarity(it.price||0);
+function showCardDetail(it){
+  const rarity=getRarity(it.rarity,it.price||0);
+  const colors={SR:'linear-gradient(135deg,#e65100,#ff9800)',R:'linear-gradient(135deg,#6a1b9a,#9c27b0)',U:'linear-gradient(135deg,#1565c0,#42a5f5)'};
   openModal(`
-    <div class="modal-head" style="background:${rarity==='SR'?'linear-gradient(135deg,#e65100,#ff9800)':rarity==='R'?'linear-gradient(135deg,#6a1b9a,#9c27b0)':rarity==='U'?'linear-gradient(135deg,#1565c0,#42a5f5)':'var(--blue)'}">
+    <div class="modal-head" style="background:${colors[rarity]||'var(--blue)'}">
       <h2>${esc(it.title)}</h2>
       <button class="modal-close" id="mc">✕</button>
     </div>
     <div class="modal-body">
       ${it.imageUrl
-        ?`<img src="${esc(it.imageUrl)}" style="width:100%;max-height:320px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:14px" alt="${esc(it.title)}"/>`
-        :`<div style="width:100%;height:160px;background:${cardBg(it.cat)};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:14px">${cardEmoji(it.cat)}</div>`}
-      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;padding:10px;background:var(--bg);border-radius:8px">${esc(it.desc||'Açıklama yok.')}</div>
+        ?`<img src="${esc(it.imageUrl)}" style="width:100%;max-height:280px;object-fit:contain;border-radius:10px;background:#f0f0f0;display:block;margin-bottom:14px"/>`
+        :`<div style="width:100%;height:140px;background:${cardBg(it.cat)};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:72px;margin-bottom:14px">${cardEmoji(it.cat)}</div>`}
+      ${it.desc?`<div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:12px;padding:10px;background:var(--bg);border-radius:8px">${esc(it.desc)}</div>`:''}
       <div class="detail-row"><span class="detail-key">Nadirlik</span><span class="detail-val">${rarityLabel(rarity)} (${rarity})</span></div>
       <div class="detail-row"><span class="detail-key">Kategori</span><span class="detail-val">${esc(it.cat||'—')}</span></div>
-      <div class="detail-row"><span class="detail-key">Fiyat</span><span class="detail-val" style="color:var(--blue)">${money(it.price||0)}</span></div>
+      ${it.fromPack?`<div class="detail-row"><span class="detail-key">Pack</span><span class="detail-val">📦 ${esc(it.fromPack)}</span></div>`:''}
+      ${it.price?`<div class="detail-row"><span class="detail-key">Fiyat</span><span class="detail-val" style="color:var(--blue)">${money(it.price)}</span></div>`:''}
       <div class="detail-row"><span class="detail-key">Adet</span><span class="detail-val">${it.qty||1}</span></div>
       <div class="detail-row"><span class="detail-key">Satıcı</span><span class="detail-val">${esc(it.sellerName||'—')}</span></div>
       <div class="detail-row"><span class="detail-key">Durum</span><span class="detail-val" style="color:${it.status==='owned'?'#2e7d32':'#e65100'}">${it.status==='owned'?'✓ Sahipsin':'⏳ Ödeme Bekleniyor'}</span></div>
       ${it.status==='pending'?`<div id="deliveryInfo" style="margin-top:12px"></div>`:''}
     </div>`);
   qs('#mc').onclick=closeModal;
-  // Show delivery day from notification if pending
   if(it.status==='pending'){
-    db.collection('sellerNotifications')
-      .where('buyerId','==',currentUser.uid)
-      .where('itemId','==',it.itemId)
-      .get().then(snap=>{
+    db.collection('sellerNotifications').where('buyerId','==',currentUser.uid).where('itemId','==',it.itemId).get()
+      .then(snap=>{
         const el=qs('#deliveryInfo');if(!el)return;
         if(!snap.empty){
           const n=snap.docs[0].data();
-          if(n.deliveryDay){
-            el.innerHTML=`<div style="background:#e8f5e9;border:2px solid #a5d6a7;border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:13px;color:#2e7d32">📅 Satıcı teslimat günü belirledi: <strong>${esc(n.deliveryDay)} gün içinde</strong><br><span style="font-size:11px;color:var(--muted)">Okulda nakit ödeme yaptıktan sonra satıcı onaylayacak.</span></div>`;
-          }else{
-            el.innerHTML=`<div style="background:#fff8e1;border:2px solid #ffb300;border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:12px;color:#e65100">⏳ Satıcı henüz teslimat günü belirlemedi.<br><span style="font-size:11px;color:var(--muted)">Satıcı bildirimden "Al" butonuna basıp gün belirlediğinde burada görünecek.</span></div>`;
-          }
+          el.innerHTML=n.deliveryDay
+            ?`<div style="background:#e8f5e9;border:2px solid #a5d6a7;border-radius:10px;padding:12px;font-family:var(--mono);font-size:12px;color:#2e7d32">📅 Satıcı teslimat belirledi: <strong>${esc(n.deliveryDay)}</strong></div>`
+            :`<div style="background:#fff8e1;border:2px solid #ffb300;border-radius:10px;padding:12px;font-family:var(--mono);font-size:12px;color:#e65100">⏳ Satıcı henüz teslimat günü belirlemedi.</div>`;
         }
       }).catch(()=>{});
   }
 }
 
-/* ─── AL BUTONU ─── */
 async function sendPickupRequest(it){
   if(!currentUser)return;
-  const confirm=window.confirm(`"${it.title}" kartını almak istediğini satıcıya bildir?`);
-  if(!confirm)return;
+  if(!window.confirm(`"${it.title}" kartını almak istediğini satıcıya bildir?`))return;
   try{
     await db.collection('sellerNotifications').add({
-      sellerId:it.sellerId,
-      buyerId:currentUser.uid,
+      sellerId:it.sellerId,buyerId:currentUser.uid,
       buyerName:currentUser.displayName||currentUser.email,
-      itemTitle:it.title,
-      itemId:it.itemId,
-      qty:it.qty||1,
-      payMethod:'cash',
-      status:'pickup_request',
-      isPickupRequest:true,
-      read:false,
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      itemTitle:it.title,itemId:it.itemId,qty:it.qty||1,
+      payMethod:'cash',status:'pickup_request',type:'pickup',
+      read:false,createdAt:firebase.firestore.FieldValue.serverTimestamp()
     });
-    // Toast
     const t=document.createElement('div');
-    t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;animation:mIn .2s ease';
-    t.innerHTML=`<div style="font-weight:700;font-size:15px;text-transform:uppercase;color:#2e7d32">✓ Bildirim Gönderildi!</div><div style="font-size:13px;margin-top:4px">${esc(it.title)}</div><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px">Satıcı seni görecek, okulda buluşun 🤝</div>`;
+    t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;';
+    t.innerHTML=`<div style="font-weight:700;color:#2e7d32">✓ Satıcıya Bildirildi!</div><div style="font-size:12px;margin-top:4px">${esc(it.title)} — Okulda buluşun 🤝</div>`;
     document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
   }catch(e){alert('Hata: '+e.message);}
 }
+
 async function loadInventory(){
   if(!currentUser){qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">🔐</div>Giriş yaparak envanterinizi görün.</div>`;return;}
   qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon" style="animation:spin 1s linear infinite;display:inline-block">⏳</div><div style="margin-top:8px">Yükleniyor...</div></div>`;
   try{
     const snap=await db.collection('inventory').where('userId','==',currentUser.uid).get();
-    const base=snap.docs.map(d=>({id:d.id,...d.data()}))
-      .sort((a,b)=>(b.addedAt?.seconds||0)-(a.addedAt?.seconds||0));
+    const base=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.addedAt?.seconds||0)-(a.addedAt?.seconds||0));
     const enriched=await Promise.all(base.map(async inv=>{
       try{
         const itemDoc=await db.collection('items').doc(inv.itemId).get();
-        if(itemDoc.exists){const d=itemDoc.data();return{...inv,desc:d.desc||inv.desc||'',imageUrl:d.imageUrl||inv.imageUrl||'',cat:d.cat||inv.cat};}
+        if(itemDoc.exists){const d=itemDoc.data();return{...inv,desc:inv.desc||d.desc||'',imageUrl:inv.imageUrl||d.imageUrl||'',cat:inv.cat||d.cat,rarity:inv.rarity||d.rarity};}
       }catch(e){}
       return inv;
     }));
@@ -424,77 +377,72 @@ async function loadInventory(){
     }else{qs('#pendingAlert').style.display='none';}
     qs('#pageSubtitle').textContent=`// ${enriched.length} kart — ${pending.length} bekleyen`;
     renderGrid();
-  }catch(e){console.error('ENVANTER HATA:',e.code, e.message);qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">❌</div><div style="font-family:var(--mono);font-size:12px">Hata: ${esc(e.message)}</div></div>`;}
+  }catch(e){
+    console.error('ENVANTER HATA:',e.code,e.message);
+    qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">❌</div><div style="font-family:var(--mono);font-size:12px">Hata: ${esc(e.message)}</div></div>`;
+  }
 }
 
-/* ─── NOTIFICATIONS ─── */
 function listenNotifications(){
   if(notifUnsub)notifUnsub();
   if(!currentUser)return;
-  notifUnsub=db.collection('sellerNotifications')
-    .where('sellerId','==',currentUser.uid)
+  notifUnsub=db.collection('sellerNotifications').where('sellerId','==',currentUser.uid)
     .onSnapshot(snap=>{
-      cachedNotifs=snap.docs.map(d=>({id:d.id,...d.data()}))
-        .filter(n=>n.read===false)
+      cachedNotifs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(n=>n.read===false)
         .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-      const count=cachedNotifs.length;
       const badge=qs('#notifCount');
-      if(count>0){badge.style.display='inline-block';badge.textContent=count;}
+      if(cachedNotifs.length>0){badge.style.display='inline-block';badge.textContent=cachedNotifs.length;}
       else{badge.style.display='none';}
     },e=>console.error('notif err:',e.code,e.message));
 }
-qs('#notifBtn').onclick=showNotifModal;
+
 function showNotifModal(){
   if(!currentUser){
-    openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Giriş yapın.</div></div>`);
+    openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><p style="font-family:var(--mono)">Giriş yapın.</p></div>`);
     qs('#mc').onclick=closeModal;return;
   }
   if(cachedNotifs.length===0){
     openModal(`<div class="modal-head"><h2>🔔 Bildirimler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:30px">Yeni bildirim yok.</div></div>`);
     qs('#mc').onclick=closeModal;return;
   }
-  const rows=cachedNotifs.map(n=>`
-    <div style="border:2px solid ${n.isPickupRequest?'#2e7d32':'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px;background:${n.isPickupRequest?'#f1f8f2':'white'}">
-      <div style="font-size:15px;font-weight:700">${esc(n.buyerName||'Alıcı')}</div>
+  const rows=cachedNotifs.map(n=>{
+    const isPickup=n.type==='pickup';
+    return `<div style="border:2px solid ${isPickup?'#a5d6a7':'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px;background:${isPickup?'#f1f8f1':'white'}">
+      <div style="font-size:15px;font-weight:700">${isPickup?'🤝 ':''}${esc(n.buyerName||'Alıcı')}</div>
       <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1}</div>
-      ${n.isPickupRequest
-        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">🤝 Bu kişi kartı almak istiyor — okulda buluşun!</div>
-          <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px;background:#2e7d32">✓ Teslim Ettim — Onayla</button>`
+      ${isPickup
+        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📬 Alıcı kartı okulda teslim almak istiyor!</div>
+          <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="background:#2e7d32">✓ Kartı Verdim — Onayla</button>`
         :n.deliveryDay
-          ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)} gün içinde</strong></div>
-            <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Nakit Teslim Alındı</button>`
-          :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Nakit ödeme bekleniyor — teslimat günü belirle</div>
-            <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-              <select class="deliverySelect" data-id="${n.id}" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;background:#f5f5f0;outline:none">
-                <option value="">Teslimat Günü Seç</option>
-                <option value="1">Yarın (1 gün)</option>
-                <option value="2">2 gün içinde</option>
-                <option value="3">3 gün içinde</option>
-                <option value="5">5 gün içinde</option>
-                <option value="7">1 hafta içinde</option>
+          ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)}</strong></div>
+            <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}">✓ Nakit Teslim Alındı</button>`
+          :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Teslimat günü belirle</div>
+            <div style="display:flex;gap:8px;margin-top:6px">
+              <select class="deliverySelect" data-id="${n.id}" style="flex:1;padding:7px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:12px">
+                <option value="">Gün Seç...</option>
+                <option value="Yarın">Yarın</option>
+                <option value="2 gün">2 gün</option>
+                <option value="3 gün">3 gün</option>
+                <option value="5 gün">5 gün</option>
+                <option value="1 hafta">1 hafta</option>
               </select>
               <button class="btn btn-primary btn-sm setDelivery" data-id="${n.id}">Al ✓</button>
             </div>`
       }
       <button class="btn btn-ghost btn-sm markRead" data-id="${n.id}" style="margin-top:8px">Kapat</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
   openModal(`<div class="modal-head"><h2>🔔 Satıcı Bildirimleri</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body">${rows}</div>`);
   qs('#mc').onclick=closeModal;
-  qsa('.markRead').forEach(b=>b.onclick=async()=>{
-    await db.collection('sellerNotifications').doc(b.dataset.id).update({read:true});showNotifModal();
-  });
+  qsa('.markRead').forEach(b=>b.onclick=async()=>{await db.collection('sellerNotifications').doc(b.dataset.id).update({read:true});showNotifModal();});
   qsa('.setDelivery').forEach(b=>b.onclick=async()=>{
     const sel=qs(`.deliverySelect[data-id="${b.dataset.id}"]`);
-    const day=sel?.value;
-    if(!day){alert('Teslimat günü seç!');return;}
-    await db.collection('sellerNotifications').doc(b.dataset.id).update({deliveryDay:day});
+    if(!sel?.value){alert('Gün seç!');return;}
+    await db.collection('sellerNotifications').doc(b.dataset.id).update({deliveryDay:sel.value});
     showNotifModal();
   });
   qsa('.confirmCash').forEach(b=>b.onclick=async()=>{
-    const snap=await db.collection('inventory')
-      .where('userId','==',b.dataset.uid)
-      .where('itemId','==',b.dataset.item)
-      .where('status','==','pending').get();
+    const snap=await db.collection('inventory').where('userId','==',b.dataset.uid).where('itemId','==',b.dataset.item).where('status','==','pending').get();
     const batch=db.batch();
     snap.docs.forEach(d=>batch.update(d.ref,{status:'owned'}));
     batch.update(db.collection('sellerNotifications').doc(b.dataset.id),{read:true});
@@ -506,67 +454,48 @@ function showNotifModal(){
 
 const ADMIN_EMAIL='urtugaz@gmail.com';
 
-/* ─── USER AREA ─── */
+async function showAdminPanel(){
+  openModal(`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — Tüm Envanterler</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body"><div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Yükleniyor...</div></div>`);
+  qs('#mc').onclick=closeModal;
+  try{
+    const snap=await db.collection('inventory').get();
+    const byUser={};
+    snap.docs.forEach(d=>{const it=d.data();const u=it.userName||it.userId||'?';if(!byUser[u])byUser[u]=[];byUser[u].push(it);});
+    const rColors={C:'#757575',U:'#1565c0',R:'#6a1b9a',SR:'#e65100'};
+    let html=Object.entries(byUser).map(([user,items])=>`
+      <div style="border:2px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden">
+        <div style="background:var(--blue-light);padding:10px 14px;display:flex;justify-content:space-between">
+          <div style="font-weight:700">👤 ${esc(user)}</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">${items.filter(i=>i.status==='owned').length} sahip · ${items.filter(i=>i.status==='pending').length} bekleyen</div>
+        </div>
+        <div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">
+          ${items.map(it=>`<div style="background:${it.status==='pending'?'#fff8e1':'#f5f5f0'};border:1.5px solid ${it.status==='pending'?'#ffb300':'#ddd'};border-radius:7px;padding:4px 10px;font-size:12px;font-family:var(--mono)">
+            ${it.rarity?`<span style="color:${rColors[it.rarity]||'#666'};font-weight:700">${it.rarity}</span> `:''}${esc(it.title||'?')} ×${it.qty||1} ${it.status==='pending'?'⏳':'✓'}
+          </div>`).join('')}
+        </div>
+      </div>`).join('');
+    qs('#modalContent').innerHTML=`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — ${Object.keys(byUser).length} Kullanıcı</h2><button class="modal-close" id="mc">✕</button></div><div class="modal-body">${html||'<p style="font-family:var(--mono);color:var(--muted)">Henüz envanter yok.</p>'}</div>`;
+    qs('#mc').onclick=closeModal;
+  }catch(e){alert('Admin hata: '+e.message);}
+}
+
 async function renderUserArea(){
   if(currentUser){
     qs('#userArea').innerHTML=`<button class="btn-ghost btn btn-sm">👤 ${esc(currentUser.displayName||currentUser.email.split('@')[0])}</button>`;
     qs('#signinBtn').textContent='Çıkış';
     qs('#signinBtn').onclick=()=>auth.signOut();
-    if(currentUser.email===ADMIN_EMAIL){
-      qs('#adminBtn').style.display='flex';
-      qs('#adminBtn').onclick=showAdminPanel;
-    }
+    if(currentUser.email===ADMIN_EMAIL){qs('#adminBtn').style.display='flex';qs('#adminBtn').onclick=showAdminPanel;}
     await loadInventory();
     listenNotifications();
   }else{
     qs('#userArea').innerHTML='';
     qs('#signinBtn').textContent='Giriş Yap';
     qs('#signinBtn').onclick=()=>{location.href='../shop/';};
+    qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">🔐</div>Giriş yaparak envanterinizi görün.</div>`;
   }
 }
 
-/* ─── ADMIN PANEL ─── */
-async function showAdminPanel(){
-  openModal(`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — Tüm Envanterler</h2><button class="modal-close" id="mc">✕</button></div>
-  <div class="modal-body"><div style="font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;padding:20px">Yükleniyor...</div></div>`);
-  qs('#mc').onclick=closeModal;
-  try{
-    const snap=await db.collection('inventory').get();
-    const all=snap.docs.map(d=>({id:d.id,...d.data()}));
-    // Group by user
-    const byUser={};
-    all.forEach(it=>{
-      const u=it.userName||it.userId||'?';
-      if(!byUser[u])byUser[u]=[];
-      byUser[u].push(it);
-    });
-    const rColors={C:'#757575',U:'#1565c0',R:'#6a1b9a',SR:'#e65100'};
-    let html='';
-    Object.entries(byUser).forEach(([user,items])=>{
-      const owned=items.filter(i=>i.status==='owned').length;
-      const pending=items.filter(i=>i.status==='pending').length;
-      html+=`<div style="border:2px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden">
-        <div style="background:var(--blue-light);padding:10px 14px;display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700;font-size:14px">👤 ${esc(user)}</div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">${owned} sahip · ${pending} bekleyen</div>
-        </div>
-        <div style="padding:10px;display:flex;flex-wrap:wrap;gap:6px">
-          ${items.map(it=>`<div style="background:${it.status==='pending'?'#fff8e1':'#f5f5f0'};border:1.5px solid ${it.status==='pending'?'#ffb300':'#ddd'};border-radius:7px;padding:5px 10px;font-size:12px;font-family:var(--mono)">
-            ${it.rarity?`<span style="color:${rColors[it.rarity]||'#666'};font-weight:700">${it.rarity}</span> `:''}${esc(it.title||'?')} ×${it.qty||1} ${it.status==='pending'?'⏳':'✓'}
-          </div>`).join('')}
-        </div>
-      </div>`;
-    });
-    qs('#modalContent').innerHTML=`<div class="modal-head" style="background:linear-gradient(135deg,#2e7d32,#4caf50)"><h2>👑 Admin — ${Object.keys(byUser).length} Kullanıcı</h2><button class="modal-close" id="mc">✕</button></div>
-    <div class="modal-body">${html||'<div style="font-family:var(--mono);color:var(--muted);text-align:center;padding:20px">Henüz envanter yok.</div>'}</div>`;
-    qs('#mc').onclick=closeModal;
-  }catch(e){alert('Admin panel hatası: '+e.message);}
-}
-
-auth.onAuthStateChanged(async user=>{
-  currentUser=user;
-  await renderUserArea();
-});
+auth.onAuthStateChanged(async user=>{currentUser=user;await renderUserArea();});
 </script>
 </body>
 </html>
