@@ -285,9 +285,11 @@ function listenNotifications(){
   }
   // by UID
   const u1=db.collection('sellerNotifications').where('sellerId','==',currentUser.uid).onSnapshot(s=>refresh(s.docs),e=>console.error('n1',e.message));
-  // by email (eski itemlar için)
+  // by email as sellerId (eski itemlar için)
   const u2=db.collection('sellerNotifications').where('sellerId','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n2',e.message));
-  unsubNotif.push(u1);unsubNotif2.push(u2);
+  // by sellerEmail field
+  const u3=db.collection('sellerNotifications').where('sellerEmail','==',currentUser.email).onSnapshot(s=>refresh(s.docs),e=>console.error('n3',e.message));
+  unsubNotif.push(u1);unsubNotif2.push(u2,u3);
 }
 
 qs('#notifBtn').onclick=showNotifModal;
