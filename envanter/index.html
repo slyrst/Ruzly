@@ -378,15 +378,24 @@ async function loadInventory(){
 
 function listenNotifications(){
   if(notifUnsub)notifUnsub();
+  if(window.notifUnsub2)window.notifUnsub2();
   if(!currentUser)return;
-  notifUnsub=db.collection('sellerNotifications').where('sellerId','==',currentUser.uid)
-    .onSnapshot(snap=>{
-      cachedNotifs=snap.docs.map(d=>({id:d.id,...d.data()})).filter(n=>n.read===false)
-        .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
-      const badge=qs('#notifCount');
-      if(cachedNotifs.length>0){badge.style.display='inline-block';badge.textContent=cachedNotifs.length;}
-      else{badge.style.display='none';}
-    },e=>console.error('notif err:',e.code,e.message));
+  const allDocs={};
+  function merge(docs){
+    docs.forEach(d=>allDocs[d.id]={id:d.id,...d.data()});
+    cachedNotifs=Object.values(allDocs)
+      .filter(n=>n.read===false)
+      .sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+    const badge=qs('#notifCount');
+    if(cachedNotifs.length>0){badge.style.display='inline-block';badge.textContent=cachedNotifs.length;}
+    else{badge.style.display='none';}
+  }
+  notifUnsub=db.collection('sellerNotifications')
+    .where('sellerId','==',currentUser.uid)
+    .onSnapshot(snap=>{merge(snap.docs);},e=>console.error('notif1:',e.message));
+  window.notifUnsub2=db.collection('sellerNotifications')
+    .where('sellerId','==',currentUser.email)
+    .onSnapshot(snap=>{merge(snap.docs);},e=>console.error('notif2:',e.message));
 }
 
 function showNotifModal(){
