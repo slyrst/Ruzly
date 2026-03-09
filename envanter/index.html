@@ -302,13 +302,41 @@ function renderGrid(){
       </div>
       <div style="padding:0 10px 10px;display:flex;gap:6px">
         <button class="btn btn-ghost btn-sm viewCardBtn" style="flex:1;font-size:11px">👁 Görüntüle</button>
+        ${it.status==='pending'?`<button class="btn btn-primary btn-sm alKartiBtn" style="flex:1;font-size:11px;background:#2e7d32">🤝 Al</button>`:''}
       </div>`;
     div.querySelector('.viewCardBtn').onclick=e=>{e.stopPropagation();showCardDetail(it);};
+    if(it.status==='pending'){
+      div.querySelector('.alKartiBtn').onclick=e=>{e.stopPropagation();sendPickupRequest(it);};
+    }
     grid.appendChild(div);
   });
 }
 
-function showCardDetail(it){
+async function sendPickupRequest(it){
+  if(!currentUser)return;
+  if(!confirm(`"${it.title}" kartını okulda teslim almak istediğini satıcıya bildirmek istiyor musun?`))return;
+  try{
+    await db.collection('sellerNotifications').add({
+      sellerId:it.sellerId,
+      buyerId:currentUser.uid,
+      buyerName:currentUser.displayName||currentUser.email,
+      itemTitle:it.title,
+      itemId:it.itemId,
+      qty:it.qty||1,
+      payMethod:'cash',
+      status:'pickup_request',
+      type:'pickup',
+      read:false,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Show toast
+    const t=document.createElement('div');
+    t.style.cssText=`position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);animation:mIn .2s ease;max-width:300px;`;
+    t.innerHTML=`<div style="font-weight:700;font-size:15px;text-transform:uppercase;color:#2e7d32">✓ Satıcıya Bildirildi!</div><div style="font-size:13px;margin-top:4px">${esc(it.title)}</div><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px">Satıcı kartı sana verecek ve onaylayacak.</div>`;
+    document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
+  }catch(e){alert('Hata: '+e.message);}
+}
+
   const rarity=getRarity(it.price||0);
   openModal(`
     <div class="modal-head" style="background:${rarity==='SR'?'linear-gradient(135deg,#e65100,#ff9800)':rarity==='R'?'linear-gradient(135deg,#6a1b9a,#9c27b0)':rarity==='U'?'linear-gradient(135deg,#1565c0,#42a5f5)':'var(--blue)'}">
@@ -348,7 +376,32 @@ function showCardDetail(it){
   }
 }
 
-/* ─── LOAD INVENTORY ─── */
+/* ─── AL BUTONU ─── */
+async function sendPickupRequest(it){
+  if(!currentUser)return;
+  const confirm=window.confirm(`"${it.title}" kartını almak istediğini satıcıya bildir?`);
+  if(!confirm)return;
+  try{
+    await db.collection('sellerNotifications').add({
+      sellerId:it.sellerId,
+      buyerId:currentUser.uid,
+      buyerName:currentUser.displayName||currentUser.email,
+      itemTitle:it.title,
+      itemId:it.itemId,
+      qty:it.qty||1,
+      payMethod:'cash',
+      status:'pickup_request',
+      isPickupRequest:true,
+      read:false,
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    // Toast
+    const t=document.createElement('div');
+    t.style.cssText='position:fixed;bottom:30px;right:30px;background:white;border:2px solid #2e7d32;border-radius:12px;padding:16px 20px;box-shadow:0 8px 40px rgba(0,0,0,0.15);z-index:500;font-family:var(--font);max-width:300px;animation:mIn .2s ease';
+    t.innerHTML=`<div style="font-weight:700;font-size:15px;text-transform:uppercase;color:#2e7d32">✓ Bildirim Gönderildi!</div><div style="font-size:13px;margin-top:4px">${esc(it.title)}</div><div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-top:4px">Satıcı seni görecek, okulda buluşun 🤝</div>`;
+    document.body.appendChild(t);setTimeout(()=>t.remove(),4000);
+  }catch(e){alert('Hata: '+e.message);}
+}
 async function loadInventory(){
   if(!currentUser){qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon">🔐</div>Giriş yaparak envanterinizi görün.</div>`;return;}
   qs('#cardGrid').innerHTML=`<div class="empty"><div class="empty-icon" style="animation:spin 1s linear infinite;display:inline-block">⏳</div><div style="margin-top:8px">Yükleniyor...</div></div>`;
@@ -401,24 +454,27 @@ function showNotifModal(){
     qs('#mc').onclick=closeModal;return;
   }
   const rows=cachedNotifs.map(n=>`
-    <div style="border:2px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px">
+    <div style="border:2px solid ${n.isPickupRequest?'#2e7d32':'var(--border)'};border-radius:10px;padding:14px;margin-bottom:10px;background:${n.isPickupRequest?'#f1f8f2':'white'}">
       <div style="font-size:15px;font-weight:700">${esc(n.buyerName||'Alıcı')}</div>
-      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1} — 💵 Nakit</div>
-      ${n.deliveryDay
-        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)}</strong> gün içinde</div>
-          <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Nakit Teslim Alındı — Onayla</button>`
-        :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Nakit ödeme bekleniyor — teslimat günü belirle</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-            <select class="deliverySelect" data-id="${n.id}" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;background:#f5f5f0;outline:none">
-              <option value="">Teslimat Günü Seç</option>
-              <option value="1">Yarın (1 gün)</option>
-              <option value="2">2 gün içinde</option>
-              <option value="3">3 gün içinde</option>
-              <option value="5">5 gün içinde</option>
-              <option value="7">1 hafta içinde</option>
-            </select>
-            <button class="btn btn-primary btn-sm setDelivery" data-id="${n.id}">Al ✓</button>
-          </div>`
+      <div style="font-family:var(--mono);font-size:12px;color:var(--muted);margin:4px 0">${esc(n.itemTitle)} × ${n.qty||1}</div>
+      ${n.isPickupRequest
+        ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">🤝 Bu kişi kartı almak istiyor — okulda buluşun!</div>
+          <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px;background:#2e7d32">✓ Teslim Ettim — Onayla</button>`
+        :n.deliveryDay
+          ?`<div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:#2e7d32;margin:8px 0">📅 Teslimat: <strong>${esc(n.deliveryDay)} gün içinde</strong></div>
+            <button class="btn btn-primary btn-sm confirmCash" data-id="${n.id}" data-uid="${n.buyerId}" data-item="${n.itemId}" style="margin-top:4px">✓ Nakit Teslim Alındı</button>`
+          :`<div style="background:#fff8e1;border:1px solid #ffb300;border-radius:6px;padding:8px 12px;font-family:var(--mono);font-size:11px;color:#e65100;margin:8px 0">⏳ Nakit ödeme bekleniyor — teslimat günü belirle</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+              <select class="deliverySelect" data-id="${n.id}" style="flex:1;padding:8px;border:2px solid var(--border);border-radius:7px;font-family:var(--font);font-size:13px;background:#f5f5f0;outline:none">
+                <option value="">Teslimat Günü Seç</option>
+                <option value="1">Yarın (1 gün)</option>
+                <option value="2">2 gün içinde</option>
+                <option value="3">3 gün içinde</option>
+                <option value="5">5 gün içinde</option>
+                <option value="7">1 hafta içinde</option>
+              </select>
+              <button class="btn btn-primary btn-sm setDelivery" data-id="${n.id}">Al ✓</button>
+            </div>`
       }
       <button class="btn btn-ghost btn-sm markRead" data-id="${n.id}" style="margin-top:8px">Kapat</button>
     </div>`).join('');
