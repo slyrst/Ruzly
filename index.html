@@ -164,16 +164,7 @@
 
         .raindrop {
             position: absolute;
-            top: -80px;
-            width: 48px;
-            height: 48px;
-            animation: fall linear infinite;
-        }
-
-        @keyframes fall {
-            0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-            90%  { opacity: 1; }
-            100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+            image-rendering: auto;
         }
 
         .wrapper, .header-area, footer {
@@ -238,33 +229,53 @@
 
     (function spawnRain() {
         var container = document.getElementById('rain-container');
-        var IMG_SRC = 'https://soybooru.com/api/booru/posts/1025/file';
-        var COUNT = 18;
+        var IMG_SRC = 'https://cdn.betterttv.net/emote/61eab52f06fd6a9f5be18f2e/3x.webp';
+        var COUNT = 22;
+        var drops = [];
+        var W = window.innerWidth;
+        var H = window.innerHeight;
+
+        window.addEventListener('resize', function() { W = window.innerWidth; H = window.innerHeight; });
+
+        function randBetween(a, b) { return a + Math.random() * (b - a); }
+
+        function resetDrop(d, fromTop) {
+            var size = Math.floor(randBetween(32, 64));
+            d.x = randBetween(0, W - size);
+            d.y = fromTop ? randBetween(-H, -size) : randBetween(-H, 0);
+            d.size = size;
+            d.speed = randBetween(1.5, 4.5);
+            d.rot = randBetween(0, 360);
+            d.rotSpeed = randBetween(-2, 2);
+            d.el.style.width = size + 'px';
+            d.el.style.height = size + 'px';
+        }
 
         for (var i = 0; i < COUNT; i++) {
-            (function(i) {
-                setTimeout(function() {
-                    var img = document.createElement('img');
-                    img.src = IMG_SRC;
-                    img.className = 'raindrop';
-                    var left = Math.random() * 100;
-                    var duration = 2.5 + Math.random() * 3;
-                    var delay = Math.random() * 4;
-                    var size = 32 + Math.floor(Math.random() * 32);
-                    img.style.left = left + 'vw';
-                    img.style.width = size + 'px';
-                    img.style.height = size + 'px';
-                    img.style.animationDuration = duration + 's';
-                    img.style.animationDelay = delay + 's';
-                    container.appendChild(img);
-
-                    img.addEventListener('animationiteration', function() {
-                        img.style.left = (Math.random() * 100) + 'vw';
-                        img.style.animationDuration = (2.5 + Math.random() * 3) + 's';
-                    });
-                }, i * 150);
-            })(i);
+            var img = document.createElement('img');
+            img.src = IMG_SRC;
+            img.className = 'raindrop';
+            container.appendChild(img);
+            var d = { el: img, x: 0, y: 0, size: 48, speed: 2, rot: 0, rotSpeed: 1 };
+            resetDrop(d, false);
+            drops.push(d);
         }
+
+        function frame() {
+            for (var i = 0; i < drops.length; i++) {
+                var d = drops[i];
+                d.y += d.speed;
+                d.rot += d.rotSpeed;
+                if (d.y > H + d.size) {
+                    resetDrop(d, true);
+                    d.y = -d.size;
+                }
+                d.el.style.transform = 'translate(' + d.x + 'px,' + d.y + 'px) rotate(' + d.rot + 'deg)';
+            }
+            requestAnimationFrame(frame);
+        }
+
+        requestAnimationFrame(frame);
     })();
 </script>
 </body>
